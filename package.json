@@ -2,7 +2,7 @@
   "name": "gwanhyn-blog",
   "private": true,
   "version": "0.1.0",
-  "homepage": "https://gwanhyn.github.io/GwanhyBlog/",
+  "homepage": "https://gwanhyn.github.io/GwanhynBlog/",
   "type": "module",
   "engines": {
     "node": "22.x"
@@ -10,9 +10,9 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
-    "build:pages": "cross-env VITE_BASE=/GwanhyBlog/ npm run build",
+    "build:pages": "cross-env VITE_BASE=/GwanhynBlog/ npm run build",
     "deploy": "npm run build:pages && gh-pages -d dist",
-    "admin": "node scripts/admin-server.mjs",
+    "admin": "node backend/admin-server.mjs",
     "run": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
