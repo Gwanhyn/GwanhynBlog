@@ -1,0 +1,1329 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Gwanhyn Blog 后台</title>
+    <style>
+      :root {
+        color: #172124;
+        background: #edf3f2;
+        font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+      }
+
+      body {
+        min-width: 1180px;
+        margin: 0;
+        overflow: hidden;
+        color: #172124;
+        background:
+          linear-gradient(135deg, rgba(80, 128, 142, 0.18), transparent 32%),
+          linear-gradient(315deg, rgba(247, 135, 54, 0.13), transparent 28%),
+          #edf3f2;
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .admin-shell {
+        display: grid;
+        width: 100vw;
+        height: 100vh;
+        grid-template-columns: 278px minmax(520px, 1fr) 360px;
+        gap: 14px;
+        padding: 14px;
+      }
+
+      .column {
+        min-height: 0;
+        overflow: hidden;
+        border: 1px solid rgba(23, 33, 36, 0.1);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow: 0 18px 50px rgba(36, 54, 58, 0.12);
+        backdrop-filter: blur(18px);
+      }
+
+      .rail {
+        display: flex;
+        flex-direction: column;
+        padding: 12px;
+      }
+
+      .brand {
+        display: flex;
+        min-height: 48px;
+        align-items: center;
+        gap: 10px;
+        padding: 4px 4px 12px;
+        border-bottom: 1px solid rgba(23, 33, 36, 0.1);
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        flex: 0 0 38px;
+        place-items: center;
+        border-radius: 8px;
+        color: #ffffff;
+        background: linear-gradient(135deg, #50808e, #f78736);
+        font-weight: 850;
+      }
+
+      .brand h1 {
+        color: #121b1e;
+        font-size: 1rem;
+        line-height: 1.1;
+      }
+
+      .brand p {
+        margin-top: 3px;
+        color: #687779;
+        font-size: 0.78rem;
+      }
+
+      .task-group {
+        display: grid;
+        gap: 8px;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(23, 33, 36, 0.1);
+      }
+
+      .task-button,
+      .button,
+      .icon-button {
+        min-height: 38px;
+        border: 1px solid rgba(23, 33, 36, 0.12);
+        border-radius: 8px;
+        color: #172124;
+        background: rgba(255, 255, 255, 0.72);
+        font-weight: 760;
+      }
+
+      .task-button {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 0 11px;
+        text-align: left;
+      }
+
+      .task-button span:first-child {
+        color: #50808e;
+        font-weight: 900;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 0 12px;
+      }
+
+      .button.primary {
+        color: #ffffff;
+        border-color: transparent;
+        background: #50808e;
+      }
+
+      .button.danger {
+        color: #a72732;
+      }
+
+      .icon-button {
+        display: grid;
+        width: 38px;
+        padding: 0;
+        place-items: center;
+      }
+
+      .task-button:hover,
+      .button:hover,
+      .icon-button:hover {
+        border-color: rgba(80, 128, 142, 0.42);
+        box-shadow: 0 8px 24px rgba(80, 128, 142, 0.12);
+      }
+
+      .rail-meta {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(23, 33, 36, 0.1);
+      }
+
+      .mini-stat {
+        min-width: 0;
+        border: 1px solid rgba(23, 33, 36, 0.09);
+        border-radius: 8px;
+        padding: 9px;
+        background: rgba(255, 255, 255, 0.52);
+      }
+
+      .mini-stat small {
+        display: block;
+        color: #687779;
+        font-size: 0.72rem;
+      }
+
+      .mini-stat strong {
+        display: block;
+        margin-top: 4px;
+        overflow: hidden;
+        color: #172124;
+        font-size: 0.92rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 2px 9px;
+      }
+
+      .section-title h2 {
+        color: #172124;
+        font-size: 0.92rem;
+      }
+
+      .post-list {
+        display: grid;
+        min-height: 0;
+        gap: 8px;
+        overflow: auto;
+        overflow-x: hidden;
+        padding-right: 3px;
+        overscroll-behavior: contain;
+      }
+
+      .post-row {
+        width: 100%;
+        border: 1px solid rgba(23, 33, 36, 0.1);
+        border-radius: 8px;
+        padding: 11px;
+        color: #172124;
+        background: rgba(255, 255, 255, 0.58);
+        text-align: left;
+      }
+
+      .post-row.active {
+        border-color: rgba(80, 128, 142, 0.58);
+        background: rgba(80, 128, 142, 0.12);
+      }
+
+      .post-row strong {
+        display: block;
+        overflow: hidden;
+        color: #172124;
+        line-height: 1.35;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .post-row span {
+        display: block;
+        margin-top: 6px;
+        overflow: hidden;
+        color: #687779;
+        font-size: 0.78rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .editor-pane {
+        overflow: auto;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+      }
+
+      .editor-form {
+        display: flex;
+        min-height: 100%;
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px;
+      }
+
+      .editor-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+      }
+
+      .editor-head h2 {
+        color: #121b1e;
+        font-size: 1.28rem;
+      }
+
+      .editor-head p {
+        margin-top: 4px;
+        color: #687779;
+        font-size: 0.86rem;
+      }
+
+      .head-actions,
+      .publish-row,
+      .history-actions,
+      .history-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .meta-grid {
+        display: grid;
+        grid-template-columns: 1.35fr 0.9fr 0.72fr 0.8fr;
+        gap: 10px;
+      }
+
+      .field {
+        display: grid;
+        gap: 5px;
+        min-width: 0;
+      }
+
+      .field span,
+      .file-drop span:first-child {
+        color: #49585b;
+        font-size: 0.78rem;
+        font-weight: 760;
+      }
+
+      input,
+      textarea,
+      select {
+        width: 100%;
+        min-width: 0;
+        border: 1px solid rgba(23, 33, 36, 0.12);
+        border-radius: 8px;
+        color: #172124;
+        background: rgba(255, 255, 255, 0.72);
+        outline: 0;
+      }
+
+      input,
+      select {
+        height: 38px;
+        padding: 0 10px;
+      }
+
+      textarea {
+        resize: none;
+      }
+
+      input:focus,
+      textarea:focus,
+      select:focus {
+        border-color: rgba(80, 128, 142, 0.68);
+        box-shadow: 0 0 0 4px rgba(80, 128, 142, 0.12);
+      }
+
+      .details-grid {
+        display: grid;
+        grid-template-columns: 0.9fr 1fr 92px 116px;
+        gap: 10px;
+      }
+
+      .excerpt-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 220px;
+        gap: 10px;
+      }
+
+      .excerpt-grid textarea {
+        min-height: 56px;
+        padding: 9px 10px;
+        line-height: 1.55;
+      }
+
+      .file-drop {
+        display: grid;
+        min-height: 56px;
+        align-content: center;
+        gap: 4px;
+        border: 1px dashed rgba(80, 128, 142, 0.42);
+        border-radius: 8px;
+        padding: 8px 10px;
+        color: #172124;
+        background: rgba(80, 128, 142, 0.08);
+        cursor: pointer;
+      }
+
+      .file-drop strong {
+        color: #172124;
+        font-size: 0.92rem;
+      }
+
+      .file-drop small {
+        overflow: hidden;
+        color: #687779;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+
+      .content-grid {
+        display: grid;
+        min-height: 470px;
+        flex: 1;
+        grid-template-columns: minmax(280px, 0.88fr) minmax(360px, 1.12fr);
+        gap: 12px;
+      }
+
+      .work-panel {
+        display: flex;
+        min-height: 0;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid rgba(23, 33, 36, 0.1);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.54);
+      }
+
+      .work-panel-header {
+        display: flex;
+        min-height: 42px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 0 12px;
+        border-bottom: 1px solid rgba(23, 33, 36, 0.09);
+      }
+
+      .work-panel-header h3 {
+        color: #172124;
+        font-size: 0.9rem;
+      }
+
+      .work-panel-header span {
+        color: #687779;
+        font-size: 0.78rem;
+      }
+
+      .markdown-input {
+        min-height: 0;
+        flex: 1;
+        border: 0;
+        border-radius: 0;
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.36);
+        font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 0.92rem;
+        line-height: 1.72;
+      }
+
+      .markdown-input:focus {
+        box-shadow: none;
+      }
+
+      .markdown-preview {
+        min-height: 0;
+        flex: 1;
+        overflow: auto;
+        overflow-x: hidden;
+        padding: 18px 20px;
+        color: #1f2d30;
+        background: rgba(255, 255, 255, 0.62);
+        line-height: 1.9;
+        overscroll-behavior: contain;
+      }
+
+      .markdown-preview h1,
+      .markdown-preview h2,
+      .markdown-preview h3 {
+        margin: 0 0 12px;
+        color: #121b1e;
+        line-height: 1.25;
+      }
+
+      .markdown-preview h1 {
+        font-size: 1.7rem;
+      }
+
+      .markdown-preview h2 {
+        margin-top: 22px;
+        font-size: 1.32rem;
+      }
+
+      .markdown-preview h3 {
+        margin-top: 18px;
+        font-size: 1.1rem;
+      }
+
+      .markdown-preview p,
+      .markdown-preview ul,
+      .markdown-preview ol,
+      .markdown-preview blockquote,
+      .markdown-preview pre {
+        margin: 0 0 15px;
+      }
+
+      .markdown-preview ul,
+      .markdown-preview ol {
+        padding-left: 22px;
+      }
+
+      .markdown-preview blockquote {
+        border-left: 4px solid #50808e;
+        padding: 8px 0 8px 14px;
+        color: #58676a;
+        background: rgba(80, 128, 142, 0.08);
+      }
+
+      .markdown-preview code {
+        border-radius: 6px;
+        padding: 2px 5px;
+        background: rgba(23, 33, 36, 0.08);
+        font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      }
+
+      .markdown-preview pre {
+        overflow: auto;
+        border-radius: 8px;
+        padding: 12px;
+        background: #172124;
+        color: #f6fbfb;
+      }
+
+      .markdown-preview pre code {
+        padding: 0;
+        background: transparent;
+      }
+
+      .publish-dock {
+        position: sticky;
+        bottom: -14px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 10px;
+        margin: 0 -14px -14px;
+        padding: 12px 14px;
+        border-top: 1px solid rgba(23, 33, 36, 0.1);
+        background: rgba(247, 250, 249, 0.9);
+        backdrop-filter: blur(14px);
+      }
+
+      .history-pane {
+        display: flex;
+        flex-direction: column;
+        padding: 14px;
+      }
+
+      .history-head {
+        justify-content: space-between;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(23, 33, 36, 0.1);
+      }
+
+      .history-head h2 {
+        color: #121b1e;
+        font-size: 1.04rem;
+      }
+
+      .history-head p {
+        margin-top: 4px;
+        color: #687779;
+        font-size: 0.8rem;
+      }
+
+      .status-line {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        padding: 12px 0;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        min-height: 28px;
+        align-items: center;
+        border: 1px solid rgba(23, 33, 36, 0.1);
+        border-radius: 999px;
+        padding: 0 10px;
+        color: #405052;
+        background: rgba(255, 255, 255, 0.64);
+        font-size: 0.78rem;
+        font-weight: 760;
+      }
+
+      .status-pill.warning {
+        color: #955417;
+        background: rgba(247, 135, 54, 0.16);
+      }
+
+      .git-tools {
+        display: grid;
+        gap: 9px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(23, 33, 36, 0.1);
+      }
+
+      .tool-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+      }
+
+      .tool-row.compact {
+        grid-template-columns: 84px minmax(0, 1fr) auto;
+      }
+
+      .timeline {
+        position: relative;
+        display: grid;
+        min-height: 0;
+        gap: 10px;
+        overflow: auto;
+        overflow-x: hidden;
+        margin-top: 12px;
+        padding-left: 18px;
+        padding-right: 3px;
+        overscroll-behavior: contain;
+      }
+
+      .timeline::before {
+        position: absolute;
+        inset: 4px auto 4px 5px;
+        width: 1px;
+        content: "";
+        background: rgba(80, 128, 142, 0.28);
+      }
+
+      .commit-card {
+        position: relative;
+        border: 1px solid rgba(23, 33, 36, 0.1);
+        border-radius: 8px;
+        padding: 11px;
+        background: rgba(255, 255, 255, 0.58);
+      }
+
+      .commit-card::before {
+        position: absolute;
+        top: 15px;
+        left: -17px;
+        width: 9px;
+        height: 9px;
+        border: 2px solid #50808e;
+        border-radius: 999px;
+        content: "";
+        background: #edf3f2;
+      }
+
+      .commit-card strong {
+        display: block;
+        overflow-wrap: anywhere;
+        color: #172124;
+        line-height: 1.38;
+      }
+
+      .commit-card span {
+        display: block;
+        margin-top: 7px;
+        color: #687779;
+        font-size: 0.78rem;
+      }
+
+      .empty-state {
+        border: 1px dashed rgba(80, 128, 142, 0.35);
+        border-radius: 8px;
+        padding: 16px;
+        color: #687779;
+        background: rgba(255, 255, 255, 0.42);
+      }
+
+      .loading {
+        position: relative;
+      }
+
+      .loading::after {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(80, 128, 142, 0.24);
+        border-top-color: #50808e;
+        border-radius: 999px;
+        content: "";
+        animation: spin 780ms linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .toast {
+        position: fixed;
+        z-index: 10;
+        right: 20px;
+        bottom: 20px;
+        max-width: min(460px, calc(100% - 40px));
+        border: 1px solid rgba(23, 33, 36, 0.12);
+        border-radius: 8px;
+        padding: 14px 16px;
+        color: #172124;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 16px 44px rgba(36, 54, 58, 0.16);
+        white-space: pre-wrap;
+        backdrop-filter: blur(18px);
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @media (max-width: 1280px) {
+        body {
+          min-width: 1080px;
+        }
+
+        .admin-shell {
+          grid-template-columns: 250px minmax(480px, 1fr) 330px;
+        }
+
+        .meta-grid,
+        .details-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .meta-grid .field:first-child {
+          grid-column: span 2;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="admin-shell">
+      <aside class="column rail" aria-label="任务栏">
+        <header class="brand">
+          <div class="brand-mark">G</div>
+          <div>
+            <h1>Gwanhyn Blog</h1>
+            <p>本地后台</p>
+          </div>
+        </header>
+
+        <div class="task-group">
+          <button class="task-button" id="newButton" type="button"><span>新</span><strong>新建文章</strong></button>
+          <button class="task-button" id="saveTaskButton" type="button"><span>存</span><strong>保存草稿</strong></button>
+          <button class="task-button" id="deleteButton" type="button"><span>删</span><strong>删除文章</strong></button>
+          <button class="task-button" id="refreshButton" type="button"><span>刷</span><strong>刷新文章</strong></button>
+        </div>
+
+        <div class="rail-meta">
+          <div class="mini-stat">
+            <small>文章数</small>
+            <strong id="articleCount">0</strong>
+          </div>
+          <div class="mini-stat">
+            <small>数据文件</small>
+            <strong id="dataFileLabel">加载中</strong>
+          </div>
+        </div>
+
+        <div class="section-title">
+          <h2>文章列表</h2>
+          <span class="status-pill" id="currentSlugLabel">未选择</span>
+        </div>
+        <div class="post-list" id="postList"></div>
+      </aside>
+
+      <section class="column editor-pane" aria-label="文章编辑">
+        <form class="editor-form" id="editorForm">
+          <div class="editor-head">
+            <div>
+              <h2>文章编辑</h2>
+              <p id="editorStateText">等待载入</p>
+            </div>
+            <div class="head-actions">
+              <button class="button" id="saveHeadButton" type="submit">保存</button>
+              <button class="button primary" id="publishHeadButton" type="button">发布</button>
+            </div>
+          </div>
+
+          <div class="meta-grid">
+            <label class="field">
+              <span>标题</span>
+              <input id="titleInput" required placeholder="请输入标题" />
+            </label>
+            <label class="field">
+              <span>地址别名</span>
+              <input id="slugInput" placeholder="自动生成或手动填写" />
+            </label>
+            <label class="field">
+              <span>发布日期</span>
+              <input id="dateInput" type="date" required />
+            </label>
+            <label class="field">
+              <span>分类</span>
+              <input id="categoryInput" placeholder="Essay" />
+            </label>
+          </div>
+
+          <div class="details-grid">
+            <label class="field">
+              <span>标签</span>
+              <input id="tagsInput" placeholder="React, Notes" />
+            </label>
+            <label class="field">
+              <span>强调色</span>
+              <select id="accentInput">
+                <option value="teal">青绿</option>
+                <option value="orange">橙色</option>
+                <option value="gold">金色</option>
+                <option value="ink">墨色</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>阅读分钟</span>
+              <input id="minutesInput" type="number" min="1" step="1" />
+            </label>
+            <label class="field">
+              <span>提交信息</span>
+              <input id="commitInput" value="Update blog content" />
+            </label>
+          </div>
+
+          <div class="excerpt-grid">
+            <label class="field">
+              <span>摘要</span>
+              <textarea id="excerptInput" placeholder="留空时会从正文自动截取"></textarea>
+            </label>
+            <label class="file-drop" for="fileInput">
+              <span>文件导入</span>
+              <strong>导入 TXT / MD</strong>
+              <small id="fileStatus">未选择文件</small>
+              <input class="visually-hidden" id="fileInput" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" />
+            </label>
+          </div>
+
+          <div class="content-grid">
+            <section class="work-panel">
+              <header class="work-panel-header">
+                <h3>Markdown 输入</h3>
+                <span id="wordCountLabel">0 字</span>
+              </header>
+              <textarea class="markdown-input" id="markdownInput" spellcheck="false" placeholder="# 标题&#10;&#10;在这里输入 Markdown 正文"></textarea>
+            </section>
+
+            <section class="work-panel">
+              <header class="work-panel-header">
+                <h3>内容预览</h3>
+                <span>按 Markdown 渲染</span>
+              </header>
+              <div class="markdown-preview" id="markdownPreview"></div>
+            </section>
+          </div>
+
+          <div class="publish-dock">
+            <input id="dockCommitInput" value="Update blog content" aria-label="发布提交信息" />
+            <button class="button" id="saveDockButton" type="submit">保存</button>
+            <button class="button primary" id="publishButton" type="button">保存并发布</button>
+          </div>
+        </form>
+      </section>
+
+      <aside class="column history-pane" id="historyPanel" aria-label="Git 历史">
+        <header class="history-head">
+          <div>
+            <h2>Git 历史</h2>
+            <p id="gitStatusText">加载中</p>
+          </div>
+          <button class="icon-button" id="historyRefreshButton" type="button" title="刷新历史">刷</button>
+        </header>
+
+        <div class="status-line">
+          <span class="status-pill" id="gitBranchBadge">master</span>
+          <span class="status-pill" id="gitDirtyBadge">未知</span>
+        </div>
+
+        <div class="git-tools">
+          <div class="tool-row">
+            <input id="amendMessageInput" placeholder="修正提交信息，可留空" />
+            <button class="button" id="amendButton" type="button">修正</button>
+          </div>
+          <div class="tool-row compact">
+            <input id="squashCountInput" type="number" min="2" value="2" aria-label="合并数量" />
+            <input id="squashMessageInput" placeholder="新的合并提交信息" />
+            <button class="button" id="squashButton" type="button">合并</button>
+          </div>
+          <button class="button primary" id="gitPushButton" type="button">推送到远端</button>
+        </div>
+
+        <div class="timeline" id="gitTimeline"></div>
+      </aside>
+    </main>
+    <div class="toast hidden" id="toast"></div>
+
+    <script>
+      const state = {
+        posts: [],
+        originalSlug: "",
+        gitHistory: [],
+        gitStatus: null,
+        previewToken: 0,
+        previewTimer: 0
+      };
+
+      const fields = {
+        title: document.querySelector("#titleInput"),
+        slug: document.querySelector("#slugInput"),
+        date: document.querySelector("#dateInput"),
+        category: document.querySelector("#categoryInput"),
+        tags: document.querySelector("#tagsInput"),
+        accent: document.querySelector("#accentInput"),
+        minutes: document.querySelector("#minutesInput"),
+        excerpt: document.querySelector("#excerptInput"),
+        markdown: document.querySelector("#markdownInput"),
+        commit: document.querySelector("#commitInput"),
+        dockCommit: document.querySelector("#dockCommitInput"),
+        amendMessage: document.querySelector("#amendMessageInput"),
+        squashCount: document.querySelector("#squashCountInput"),
+        squashMessage: document.querySelector("#squashMessageInput")
+      };
+
+      function showToast(message) {
+        const toast = document.querySelector("#toast");
+        toast.textContent = message;
+        toast.classList.remove("hidden");
+        window.clearTimeout(showToast.timer);
+        showToast.timer = window.setTimeout(() => toast.classList.add("hidden"), 4300);
+      }
+
+      async function api(path, options = {}) {
+        const response = await fetch(path, {
+          headers: { "content-type": "application/json" },
+          ...options
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          const details = Array.isArray(data.details) ? "\n" + data.details.join("\n") : "";
+          throw new Error((data.error || "请求失败。") + details);
+        }
+        return data;
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+
+      function today() {
+        return new Date().toISOString().slice(0, 10);
+      }
+
+      function slugifyClient(value) {
+        const slug = String(value || "")
+          .normalize("NFKD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+        return slug || "new-post";
+      }
+
+      function plainMarkdown(markdown) {
+        return String(markdown || "")
+          .replace(/```[\s\S]*?```/g, " ")
+          .replace(/`([^`]+)`/g, "$1")
+          .replace(/!\[[^\]]*]\([^)]*\)/g, " ")
+          .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
+          .replace(/[#>*_\-\[\]()`]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function estimateMinutes(markdown) {
+        const text = plainMarkdown(markdown);
+        const cjkCount = (text.match(/[\u3400-\u9fff]/g) || []).length;
+        const wordCount = (text.replace(/[\u3400-\u9fff]/g, " ").match(/[a-z0-9]+/gi) || []).length;
+        return Math.max(1, Math.round((cjkCount + wordCount) / 320) || 1);
+      }
+
+      function emptyPost() {
+        return {
+          slug: "",
+          title: "",
+          date: today(),
+          category: "Essay",
+          tags: [],
+          excerpt: "",
+          markdown: "",
+          minutes: 3,
+          accent: "teal"
+        };
+      }
+
+      function getCommitMessage() {
+        return fields.dockCommit.value.trim() || fields.commit.value.trim() || "Update blog content";
+      }
+
+      function syncCommitInputs(source) {
+        const value = source.value;
+        if (source === fields.commit) fields.dockCommit.value = value;
+        if (source === fields.dockCommit) fields.commit.value = value;
+      }
+
+      function selectPost(post) {
+        state.originalSlug = post.slug || "";
+        fields.title.value = post.title || "";
+        fields.slug.value = post.slug || "";
+        fields.date.value = post.date || today();
+        fields.category.value = post.category || "Essay";
+        fields.tags.value = (post.tags || []).join(", ");
+        fields.accent.value = post.accent || "teal";
+        fields.minutes.value = post.minutes || 3;
+        fields.excerpt.value = post.excerpt || "";
+        fields.markdown.value = post.markdown || "";
+        document.querySelector("#currentSlugLabel").textContent = post.slug || "新文章";
+        document.querySelector("#editorStateText").textContent = post.slug ? "正在编辑：" + post.slug : "新文章";
+        document.querySelector("#fileStatus").textContent = "未选择文件";
+        renderList();
+        renderWordCount();
+        renderPreviewNow();
+      }
+
+      function readForm() {
+        return {
+          title: fields.title.value,
+          slug: fields.slug.value,
+          date: fields.date.value,
+          category: fields.category.value,
+          tags: fields.tags.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+          accent: fields.accent.value,
+          minutes: Number(fields.minutes.value || estimateMinutes(fields.markdown.value)),
+          excerpt: fields.excerpt.value,
+          markdown: fields.markdown.value
+        };
+      }
+
+      function renderList() {
+        const list = document.querySelector("#postList");
+        document.querySelector("#articleCount").textContent = String(state.posts.length);
+        list.innerHTML = state.posts.map((post) => (
+          '<button class="post-row ' + (post.slug === state.originalSlug ? "active" : "") + '" type="button" data-slug="' + escapeHtml(post.slug) + '">' +
+            "<strong>" + escapeHtml(post.title) + "</strong>" +
+            "<span>" + escapeHtml(post.date) + " / " + escapeHtml(post.category) + "</span>" +
+          "</button>"
+        )).join("") || '<div class="empty-state">暂无文章</div>';
+
+        list.querySelectorAll("[data-slug]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const post = state.posts.find((item) => item.slug === button.dataset.slug);
+            if (post) selectPost(post);
+          });
+        });
+      }
+
+      function renderWordCount() {
+        const count = plainMarkdown(fields.markdown.value).length;
+        document.querySelector("#wordCountLabel").textContent = count + " 字";
+      }
+
+      async function renderPreviewNow() {
+        const token = ++state.previewToken;
+        const preview = document.querySelector("#markdownPreview");
+        preview.innerHTML = '<div class="empty-state">正在渲染</div>';
+        try {
+          const data = await api("/api/markdown/preview", {
+            method: "POST",
+            body: JSON.stringify({ markdown: fields.markdown.value })
+          });
+          if (token === state.previewToken) {
+            preview.innerHTML = data.html || '<div class="empty-state">暂无内容</div>';
+          }
+        } catch (error) {
+          if (token === state.previewToken) {
+            preview.innerHTML = '<div class="empty-state">' + escapeHtml(error.message) + "</div>";
+          }
+        }
+      }
+
+      function schedulePreview() {
+        renderWordCount();
+        window.clearTimeout(state.previewTimer);
+        state.previewTimer = window.setTimeout(renderPreviewNow, 260);
+      }
+
+      function renderGitPanel() {
+        const status = state.gitStatus || {};
+        const badge = document.querySelector("#gitBranchBadge");
+        const dirtyBadge = document.querySelector("#gitDirtyBadge");
+        const statusText = document.querySelector("#gitStatusText");
+        const timeline = document.querySelector("#gitTimeline");
+        const dirtyText = status.dirty ? "有未提交改动" : "工作区干净";
+        const rewriteText = status.historyRewritten ? "，历史已重写待推送" : "";
+
+        badge.textContent = status.branch || "master";
+        dirtyBadge.textContent = dirtyText;
+        dirtyBadge.classList.toggle("warning", Boolean(status.dirty || status.historyRewritten));
+        badge.classList.toggle("warning", Boolean(status.historyRewritten));
+        statusText.textContent = dirtyText + rewriteText;
+
+        timeline.innerHTML = state.gitHistory.map((commit) => (
+          '<article class="commit-card" title="' + escapeHtml(commit.hash) + '">' +
+            "<strong>" + escapeHtml(commit.subject) + "</strong>" +
+            "<span>" + escapeHtml(commit.shortHash) + " / " + escapeHtml(commit.relativeTime) + " / " + escapeHtml(commit.author) + "</span>" +
+          "</article>"
+        )).join("") || '<div class="empty-state">暂无提交记录</div>';
+      }
+
+      function setHistoryBusy(isBusy) {
+        document.querySelector("#historyPanel").classList.toggle("loading", isBusy);
+        document.querySelector("#historyPanel").setAttribute("aria-busy", String(isBusy));
+      }
+
+      async function loadGit() {
+        setHistoryBusy(true);
+        try {
+          const data = await api("/api/git/history?limit=10");
+          state.gitHistory = data.commits || [];
+          state.gitStatus = data.status || null;
+          renderGitPanel();
+        } finally {
+          setHistoryBusy(false);
+        }
+      }
+
+      async function loadGitStatus() {
+        state.gitStatus = await api("/api/git/status");
+        renderGitPanel();
+      }
+
+      async function saveCurrentPost() {
+        const data = await api("/api/posts", {
+          method: "POST",
+          body: JSON.stringify({ originalSlug: state.originalSlug, post: readForm() })
+        });
+        state.posts = data.posts;
+        selectPost(data.post);
+        await loadGitStatus();
+        return data;
+      }
+
+      async function loadPosts() {
+        const [diagnostics, postsData] = await Promise.all([
+          api("/api/diagnostics"),
+          api("/api/posts")
+        ]);
+        state.posts = postsData.posts || [];
+        document.querySelector("#dataFileLabel").textContent = diagnostics.dataFile || "posts.json";
+        renderList();
+        selectPost(state.posts.find((post) => post.slug === state.originalSlug) || state.posts[0] || emptyPost());
+      }
+
+      async function load() {
+        await Promise.all([loadPosts(), loadGit()]);
+      }
+
+      function titleFromMarkdown(markdown, fallback) {
+        const heading = String(markdown || "").split("\n").find((line) => /^#\s+/.test(line.trim()));
+        if (heading) return heading.replace(/^#\s+/, "").trim();
+        return fallback.replace(/\.(md|markdown|txt)$/i, "").trim() || "新文章";
+      }
+
+      async function importFile(file) {
+        const isSupported = /\.(md|markdown|txt)$/i.test(file.name) || /text\/(plain|markdown)/.test(file.type);
+        if (!isSupported) {
+          throw new Error("仅支持 txt、md 或 markdown 文件。");
+        }
+
+        const text = (await file.text()).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+        fields.markdown.value = text;
+
+        if (!fields.title.value.trim()) {
+          fields.title.value = titleFromMarkdown(text, file.name);
+        }
+        if (!fields.slug.value.trim()) {
+          fields.slug.value = slugifyClient(fields.title.value || file.name);
+        }
+        if (!fields.excerpt.value.trim()) {
+          fields.excerpt.value = plainMarkdown(text).slice(0, 140);
+        }
+        fields.minutes.value = estimateMinutes(text);
+        document.querySelector("#fileStatus").textContent = file.name;
+        schedulePreview();
+      }
+
+      document.querySelector("#newButton").addEventListener("click", () => selectPost(emptyPost()));
+      document.querySelector("#saveTaskButton").addEventListener("click", () => document.querySelector("#editorForm").requestSubmit());
+      document.querySelector("#refreshButton").addEventListener("click", async () => {
+        try {
+          await loadPosts();
+          await loadGitStatus();
+          showToast("文章已刷新。");
+        } catch (error) {
+          showToast(error.message);
+        }
+      });
+      document.querySelector("#historyRefreshButton").addEventListener("click", () => loadGit().then(() => showToast("Git 历史已刷新。")).catch((error) => showToast(error.message)));
+
+      fields.commit.addEventListener("input", () => syncCommitInputs(fields.commit));
+      fields.dockCommit.addEventListener("input", () => syncCommitInputs(fields.dockCommit));
+      fields.markdown.addEventListener("input", schedulePreview);
+
+      document.querySelector("#fileInput").addEventListener("change", async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        try {
+          await importFile(file);
+          showToast("文件已导入。");
+        } catch (error) {
+          showToast(error.message);
+        } finally {
+          event.target.value = "";
+        }
+      });
+
+      document.querySelector("#editorForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        try {
+          await saveCurrentPost();
+          showToast("已保存到 src/data/posts.json。");
+        } catch (error) {
+          showToast(error.message);
+        }
+      });
+
+      document.querySelector("#deleteButton").addEventListener("click", async () => {
+        if (!state.originalSlug || !window.confirm("确认删除当前文章？")) return;
+        try {
+          const data = await api("/api/posts/" + encodeURIComponent(state.originalSlug), {
+            method: "DELETE"
+          });
+          state.posts = data.posts;
+          selectPost(state.posts[0] || emptyPost());
+          await loadGitStatus();
+          showToast("文章已删除。");
+        } catch (error) {
+          showToast(error.message);
+        }
+      });
+
+      async function publishCurrentPost() {
+        await saveCurrentPost();
+        const data = await api("/api/publish", {
+          method: "POST",
+          body: JSON.stringify({
+            message: getCommitMessage(),
+            force: Boolean(state.gitStatus && state.gitStatus.historyRewritten)
+          })
+        });
+        await loadGit();
+        showToast([
+          data.add.command,
+          data.commit.skipped ? data.commit.stderr : data.commit.stdout,
+          data.push.stdout || data.push.stderr || data.push.command
+        ].filter(Boolean).join("\n"));
+      }
+
+      document.querySelector("#publishButton").addEventListener("click", () => publishCurrentPost().catch((error) => showToast(error.message)));
+      document.querySelector("#publishHeadButton").addEventListener("click", () => publishCurrentPost().catch((error) => showToast(error.message)));
+
+      document.querySelector("#amendButton").addEventListener("click", async () => {
+        try {
+          setHistoryBusy(true);
+          const data = await api("/api/git/amend", {
+            method: "POST",
+            body: JSON.stringify({ message: fields.amendMessage.value })
+          });
+          await loadGit();
+          showToast(data.commit.stdout || data.commit.stderr || "最新提交已修正。");
+        } catch (error) {
+          showToast(error.message);
+        } finally {
+          setHistoryBusy(false);
+        }
+      });
+
+      document.querySelector("#squashButton").addEventListener("click", async () => {
+        const count = Number(fields.squashCount.value || 2);
+        const message = fields.squashMessage.value.trim() || window.prompt("新的合并提交信息", "Update blog content");
+        if (!message) return;
+
+        try {
+          setHistoryBusy(true);
+          const data = await api("/api/git/squash", {
+            method: "POST",
+            body: JSON.stringify({ count, message })
+          });
+          state.gitHistory = data.history.commits || [];
+          state.gitStatus = data.status || data.history.status || null;
+          renderGitPanel();
+          showToast(data.commit.stdout || "提交已合并。");
+        } catch (error) {
+          showToast(error.message);
+        } finally {
+          setHistoryBusy(false);
+        }
+      });
+
+      document.querySelector("#gitPushButton").addEventListener("click", async () => {
+        try {
+          setHistoryBusy(true);
+          const data = await api("/api/git/push", {
+            method: "POST",
+            body: JSON.stringify({
+              force: Boolean(state.gitStatus && state.gitStatus.historyRewritten)
+            })
+          });
+          await loadGit();
+          showToast((data.forced ? "已使用 force-with-lease 推送。\n" : "已推送。\n") + (data.push.stdout || data.push.stderr || data.push.command));
+        } catch (error) {
+          showToast(error.message);
+        } finally {
+          setHistoryBusy(false);
+        }
+      });
+
+      load().catch((error) => showToast(error.message));
+    </script>
+  </body>
+</html>
