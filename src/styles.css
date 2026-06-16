@@ -600,54 +600,44 @@ a {
   font-weight: 750;
 }
 
-.dialog-backdrop {
-  position: fixed;
-  z-index: 40;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(10, 18, 22, 0.35);
-  backdrop-filter: blur(12px);
+.article-page-heading {
+  margin-bottom: 14px;
 }
 
-.article-dialog {
-  position: relative;
-  width: min(760px, 100%);
-  max-height: min(760px, calc(100vh - 48px));
-  overflow: auto;
+.back-button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 28px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(22px);
-}
-
-.dialog-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  padding: 0 12px;
   color: var(--text-strong);
   background: var(--surface-muted);
+  cursor: pointer;
+  font-weight: 750;
 }
 
-.article-dialog h2 {
-  max-width: 640px;
+.article-page {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: clamp(24px, 4vw, 44px);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.article-page h2 {
+  max-width: 780px;
   margin: 14px 0 0;
   color: var(--text-strong);
-  font-size: 2rem;
-  line-height: 1.2;
+  font-size: clamp(2rem, 5vw, 3.15rem);
+  line-height: 1.08;
 }
 
 .article-body {
-  margin-top: 24px;
+  max-width: 820px;
+  margin-top: 28px;
   color: var(--text);
   line-height: 1.9;
 }
@@ -668,6 +658,55 @@ a {
   border-left: 4px solid var(--primary);
   padding: 8px 0 8px 16px;
   color: var(--muted);
+}
+
+.article-body h1,
+.article-body h2,
+.article-body h3,
+.article-body h4 {
+  margin: 28px 0 12px;
+  color: var(--text-strong);
+  line-height: 1.25;
+}
+
+.article-body h1 {
+  font-size: 2rem;
+}
+
+.article-body h2 {
+  font-size: 1.55rem;
+}
+
+.article-body h3 {
+  font-size: 1.2rem;
+}
+
+.article-body table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 0 0 18px;
+}
+
+.article-body th,
+.article-body td {
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.article-body code {
+  border-radius: 6px;
+  padding: 2px 5px;
+  background: var(--surface-muted);
+}
+
+.article-body pre {
+  overflow: auto;
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--surface-muted);
 }
 
 .timeline,

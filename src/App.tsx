@@ -1,5 +1,6 @@
 import {
   Archive,
+  ArrowLeft,
   BookOpen,
   CalendarDays,
   Clock3,
@@ -11,14 +12,13 @@ import {
   Search,
   Sun,
   Tag,
-  X,
   UserRound
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { focusItems, posts, profile, type Post } from "./content";
 
 type Theme = "light" | "dark";
-type View = "home" | "archives" | "categories" | "about";
+type View = "home" | "archives" | "categories" | "about" | "post";
 
 const navItems: Array<{ view: View; label: string; icon: typeof Home }> = [
   { view: "home", label: "Home", icon: Home },
@@ -46,6 +46,12 @@ function formatDate(date: string) {
   }).format(new Date(`${date}T00:00:00`));
 }
 
+function parseHash() {
+  const hash = window.location.hash.replace(/^#/, "");
+  const [route, value] = hash.split("/");
+  return { route, value: value ? decodeURIComponent(value) : "" };
+}
+
 function App() {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [view, setView] = useState<View>("home");
@@ -57,6 +63,33 @@ function App() {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem("gwanhyn-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    const syncFromHash = () => {
+      const { route, value } = parseHash();
+      if (route === "post" && value) {
+        const post = posts.find((item) => item.slug === value);
+        if (post) {
+          setSelectedPost(post);
+          setView("post");
+          return;
+        }
+      }
+
+      if (route === "archives" || route === "categories" || route === "about" || route === "home") {
+        setSelectedPost(null);
+        setView(route);
+        return;
+      }
+
+      setSelectedPost(null);
+      setView("home");
+    };
+
+    syncFromHash();
+    window.addEventListener("hashchange", syncFromHash);
+    return () => window.removeEventListener("hashchange", syncFromHash);
+  }, []);
 
   const categories = useMemo(() => {
     const counts = posts.reduce<Record<string, number>>((acc, post) => {
@@ -90,6 +123,17 @@ function App() {
 
   const changeView = (nextView: View) => {
     setView(nextView);
+    if (nextView !== "post") {
+      setSelectedPost(null);
+    }
+    window.location.hash = nextView === "home" ? "home" : nextView;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const openPost = (post: Post) => {
+    setSelectedPost(post);
+    setView("post");
+    window.location.hash = `post/${encodeURIComponent(post.slug)}`;
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -208,7 +252,7 @@ function App() {
                 query={query}
                 setCategory={setCategory}
                 setQuery={setQuery}
-                onPostOpen={setSelectedPost}
+                onPostOpen={openPost}
               />
             )}
 
@@ -225,6 +269,10 @@ function App() {
             )}
 
             {view === "about" && <AboutView />}
+
+            {view === "post" && selectedPost && (
+              <ArticleView post={selectedPost} onBack={() => changeView("home")} />
+            )}
           </section>
         </div>
       </main>
@@ -234,9 +282,6 @@ function App() {
         <span>Built with React and Vite</span>
       </footer>
 
-      {selectedPost && (
-        <ArticleDialog post={selectedPost} onClose={() => setSelectedPost(null)} />
-      )}
     </>
   );
 }
@@ -447,19 +492,16 @@ function AboutView() {
   );
 }
 
-function ArticleDialog({ post, onClose }: { post: Post; onClose: () => void }) {
+function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
   return (
-    <div className="dialog-backdrop" role="presentation" onClick={onClose}>
-      <article
-        className="article-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="article-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <button className="dialog-close" type="button" aria-label="Close article" onClick={onClose}>
-          <X size={18} />
+    <>
+      <div className="article-page-heading">
+        <button className="back-button" type="button" onClick={onBack}>
+          <ArrowLeft size={17} />
+          <span>Back</span>
         </button>
+      </div>
+      <article className="article-page">
         <div className="post-meta">
           <span>
             <CalendarDays size={15} />
@@ -484,7 +526,7 @@ function ArticleDialog({ post, onClose }: { post: Post; onClose: () => void }) {
           dangerouslySetInnerHTML={{ __html: post.body || `<p>${post.excerpt}</p>` }}
         />
       </article>
-    </div>
+    </>
   );
 }
 
