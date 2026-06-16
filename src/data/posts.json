@@ -15,17 +15,6 @@
     "accent": "teal"
   },
   {
-    "slug": "test",
-    "title": "test",
-    "date": "2026-06-16",
-    "category": "Essay",
-    "tags": [],
-    "excerpt": "test",
-    "body": "test<p></p>",
-    "minutes": 3,
-    "accent": "teal"
-  },
-  {
     "slug": "os-lab-review",
     "title": "一次系统实验后的复盘清单",
     "date": "2026-05-28",
