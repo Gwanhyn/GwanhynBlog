@@ -1,0 +1,34 @@
+{
+  "name": "gwanhy-blog",
+  "private": true,
+  "version": "0.1.0",
+  "homepage": "https://gwanhyn.github.io/GwanhyBlog/",
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "build:pages": "cross-env VITE_BASE=/GwanhyBlog/ npm run build",
+    "deploy": "npm run build:pages && gh-pages -d dist",
+    "run": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "cross-env": "^10.1.0",
+    "gh-pages": "^6.3.0",
+    "typescript": "^6.0.3",
+    "vite": "^6.4.3"
+  },
+  "overrides": {
+    "esbuild": "0.28.1"
+  }
+}
