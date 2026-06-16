@@ -7,8 +7,10 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const DATA_FILE = path.join(ROOT, "src", "data", "posts.json");
+const FAVICON_FILE = path.join(ROOT, "public", "favicon.svg");
 const PORT = Number(process.env.ADMIN_PORT || 8787);
 const ACCENTS = new Set(["teal", "orange", "gold", "ink"]);
+let historyRewritten = false;
 
 function sendJson(response, status, payload) {
   response.writeHead(status, {
@@ -24,6 +26,15 @@ function sendHtml(response, html) {
     "cache-control": "no-store"
   });
   response.end(html);
+}
+
+async function sendFavicon(response) {
+  const icon = await readFile(FAVICON_FILE, "utf8");
+  response.writeHead(200, {
+    "content-type": "image/svg+xml; charset=utf-8",
+    "cache-control": "public, max-age=3600"
+  });
+  response.end(icon);
 }
 
 function readRequestBody(request) {
@@ -186,7 +197,123 @@ function runGit(args) {
   });
 }
 
-async function publish(message) {
+function parseGitHistory(output) {
+  return output
+    .split("\x1e")
+    .map((record) => record.trim())
+    .filter(Boolean)
+    .map((record) => {
+      const [hash, shortHash, subject, relativeTime, author] = record.split("\x1f");
+      return { hash, shortHash, subject, relativeTime, author };
+    });
+}
+
+async function gitStatus() {
+  const [branch, status] = await Promise.all([
+    runGit(["branch", "--show-current"]),
+    runGit(["status", "--porcelain"])
+  ]);
+
+  return {
+    branch: branch.stdout || "master",
+    dirty: Boolean(status.stdout),
+    entries: status.stdout ? status.stdout.split("\n") : [],
+    historyRewritten
+  };
+}
+
+async function gitHistory(limit = 8) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 8, 1), 30);
+  const history = await runGit([
+    "log",
+    `--max-count=${safeLimit}`,
+    "--date=relative",
+    "--pretty=format:%H%x1f%h%x1f%s%x1f%cr%x1f%an%x1e"
+  ]);
+
+  return { commits: parseGitHistory(history.stdout), status: await gitStatus() };
+}
+
+async function ensureCleanWorkingTree() {
+  const status = await gitStatus();
+
+  if (status.dirty) {
+    const error = new Error("Working tree must be clean before squashing history.");
+    error.status = 409;
+    error.details = status.entries;
+    throw error;
+  }
+}
+
+async function amendLastCommit(message) {
+  const commitMessage = String(message || "").trim();
+  const add = await runGit(["add", "-A"]);
+  const args = ["commit", "--amend"];
+
+  if (commitMessage) {
+    args.push("-m", commitMessage);
+  } else {
+    args.push("--no-edit");
+  }
+
+  const commit = await runGit(args);
+  historyRewritten = true;
+  return { add, commit, status: await gitStatus() };
+}
+
+async function resolveSquashCount(payload) {
+  if (payload.targetHash) {
+    const targetHash = String(payload.targetHash).trim();
+    await runGit(["rev-parse", "--verify", `${targetHash}^{commit}`]);
+    await runGit(["merge-base", "--is-ancestor", targetHash, "HEAD"]);
+    const count = await runGit(["rev-list", "--count", `${targetHash}^..HEAD`]);
+    return Number(count.stdout);
+  }
+
+  return Number(payload.count || 0);
+}
+
+async function squashCommits(payload) {
+  const commitMessage = String(payload.message || "").trim();
+  const count = await resolveSquashCount(payload);
+
+  if (!commitMessage) {
+    const error = new Error("A new commit message is required for squash.");
+    error.status = 400;
+    throw error;
+  }
+
+  if (!Number.isInteger(count) || count < 2) {
+    const error = new Error("Squash count must be at least 2.");
+    error.status = 400;
+    throw error;
+  }
+
+  const total = Number((await runGit(["rev-list", "--count", "HEAD"])).stdout);
+  if (count >= total) {
+    const error = new Error("Cannot squash all commits from the root commit in this panel.");
+    error.status = 400;
+    throw error;
+  }
+
+  await ensureCleanWorkingTree();
+  const reset = await runGit(["reset", "--soft", `HEAD~${count}`]);
+  const commit = await runGit(["commit", "-m", commitMessage]);
+  historyRewritten = true;
+  return { reset, commit, status: await gitStatus(), history: await gitHistory() };
+}
+
+async function pushToRemote(force = false) {
+  const shouldForce = Boolean(force || historyRewritten);
+  const args = shouldForce
+    ? ["push", "--force-with-lease", "origin", "master"]
+    : ["push", "origin", "master"];
+  const push = await runGit(args);
+  historyRewritten = false;
+  return { push, forced: shouldForce, status: await gitStatus() };
+}
+
+async function publish(message, options = {}) {
   const commitMessage = String(message || "Update blog content").trim();
   const add = await runGit(["add", "-A"]);
   const status = await runGit(["status", "--porcelain"]);
@@ -201,8 +328,15 @@ async function publish(message) {
     commit = await runGit(["commit", "-m", commitMessage]);
   }
 
-  const push = await runGit(["push", "origin", "master"]);
-  return { add, status, commit, push };
+  const pushResult = await pushToRemote(options.force);
+  return {
+    add,
+    status,
+    commit,
+    push: pushResult.push,
+    forced: pushResult.forced,
+    gitStatus: pushResult.status
+  };
 }
 
 function notFound(response) {
@@ -240,7 +374,35 @@ async function routeApi(request, response, url) {
 
   if (request.method === "POST" && url.pathname === "/api/publish") {
     const payload = JSON.parse(await readRequestBody(request) || "{}");
-    sendJson(response, 200, await publish(payload.message));
+    sendJson(response, 200, await publish(payload.message, { force: payload.force }));
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/git/status") {
+    sendJson(response, 200, await gitStatus());
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/git/history") {
+    sendJson(response, 200, await gitHistory(url.searchParams.get("limit") || 8));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/git/amend") {
+    const payload = JSON.parse(await readRequestBody(request) || "{}");
+    sendJson(response, 200, await amendLastCommit(payload.message));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/git/squash") {
+    const payload = JSON.parse(await readRequestBody(request) || "{}");
+    sendJson(response, 200, await squashCommits(payload));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/git/push") {
+    const payload = JSON.parse(await readRequestBody(request) || "{}");
+    sendJson(response, 200, await pushToRemote(payload.force));
     return;
   }
 
@@ -252,6 +414,7 @@ const ADMIN_HTML = String.raw`<!doctype html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Gwanhyn Blog Admin</title>
     <style>
       :root {
@@ -342,6 +505,11 @@ const ADMIN_HTML = String.raw`<!doctype html>
         align-items: start;
       }
 
+      .sidebar-stack {
+        display: grid;
+        gap: 18px;
+      }
+
       .panel {
         padding: 18px;
       }
@@ -382,6 +550,119 @@ const ADMIN_HTML = String.raw`<!doctype html>
         margin-top: 6px;
         color: #657477;
         font-size: 0.88rem;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        border: 1px solid rgba(24, 35, 38, 0.1);
+        border-radius: 999px;
+        padding: 0 10px;
+        color: #3d4c4f;
+        background: rgba(255, 255, 255, 0.66);
+        font-size: 0.82rem;
+        font-weight: 750;
+      }
+
+      .status-pill.warning {
+        color: #9f5b1f;
+        background: rgba(247, 135, 54, 0.14);
+      }
+
+      .history-panel {
+        overflow: hidden;
+      }
+
+      .history-head {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .history-actions {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .history-action-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+
+      .timeline {
+        position: relative;
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+        padding-left: 18px;
+      }
+
+      .timeline::before {
+        position: absolute;
+        inset: 5px auto 5px 5px;
+        width: 1px;
+        content: "";
+        background: rgba(80, 128, 142, 0.26);
+      }
+
+      .commit-card {
+        position: relative;
+        border: 1px solid rgba(24, 35, 38, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.58);
+      }
+
+      .commit-card::before {
+        position: absolute;
+        top: 16px;
+        left: -17px;
+        width: 9px;
+        height: 9px;
+        border: 2px solid #50808e;
+        border-radius: 999px;
+        content: "";
+        background: #f4f7f6;
+      }
+
+      .commit-card strong {
+        display: block;
+        color: #182326;
+        line-height: 1.35;
+      }
+
+      .commit-card span {
+        display: block;
+        margin-top: 6px;
+        color: #657477;
+        font-size: 0.82rem;
+      }
+
+      .loading {
+        position: relative;
+        pointer-events: none;
+        opacity: 0.7;
+      }
+
+      .loading::after {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(80, 128, 142, 0.22);
+        border-top-color: #50808e;
+        border-radius: 999px;
+        content: "";
+        animation: spin 800ms linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
       }
 
       .form {
@@ -461,7 +742,8 @@ const ADMIN_HTML = String.raw`<!doctype html>
       @media (max-width: 860px) {
         .grid,
         .field-row,
-        .publish-box {
+        .publish-box,
+        .history-action-row {
           grid-template-columns: 1fr;
         }
       }
@@ -481,10 +763,38 @@ const ADMIN_HTML = String.raw`<!doctype html>
       </header>
 
       <div class="grid">
-        <aside class="panel">
-          <h2>Data Flow</h2>
-          <div class="diagnostics" id="diagnostics"></div>
-          <div class="post-list" id="postList"></div>
+        <aside class="sidebar-stack">
+          <section class="panel">
+            <h2>Data Flow</h2>
+            <div class="diagnostics" id="diagnostics"></div>
+            <div class="post-list" id="postList"></div>
+          </section>
+
+          <section class="panel history-panel" id="historyPanel">
+            <div class="history-head">
+              <div>
+                <h2>Git History</h2>
+                <p class="muted" id="gitStatusText">Loading history...</p>
+              </div>
+              <span class="status-pill" id="gitBranchBadge">master</span>
+            </div>
+
+            <div class="history-actions">
+              <button class="button" id="draftButton" type="button">Save Draft</button>
+              <div class="history-action-row">
+                <input id="amendMessageInput" placeholder="Amend message, optional" />
+                <button class="button" id="amendButton" type="button">Amend</button>
+              </div>
+              <div class="history-action-row">
+                <input id="squashCountInput" type="number" min="2" value="2" />
+                <button class="button" id="squashButton" type="button">Squash</button>
+              </div>
+              <input id="squashMessageInput" placeholder="New squash commit message" />
+              <button class="button primary" id="gitPushButton" type="button">Push</button>
+            </div>
+
+            <div class="timeline" id="gitTimeline"></div>
+          </section>
         </aside>
 
         <section class="panel">
@@ -539,7 +849,13 @@ const ADMIN_HTML = String.raw`<!doctype html>
     <div class="toast hidden" id="toast"></div>
 
     <script>
-      const state = { posts: [], originalSlug: "" };
+      const state = {
+        posts: [],
+        originalSlug: "",
+        gitHistory: [],
+        gitStatus: null,
+        busy: false
+      };
       const fields = {
         title: document.querySelector("#titleInput"),
         slug: document.querySelector("#slugInput"),
@@ -550,7 +866,10 @@ const ADMIN_HTML = String.raw`<!doctype html>
         minutes: document.querySelector("#minutesInput"),
         excerpt: document.querySelector("#excerptInput"),
         body: document.querySelector("#bodyEditor"),
-        commit: document.querySelector("#commitInput")
+        commit: document.querySelector("#commitInput"),
+        amendMessage: document.querySelector("#amendMessageInput"),
+        squashCount: document.querySelector("#squashCountInput"),
+        squashMessage: document.querySelector("#squashMessageInput")
       };
 
       function showToast(message) {
@@ -571,6 +890,11 @@ const ADMIN_HTML = String.raw`<!doctype html>
           throw new Error(data.error || "Request failed.");
         }
         return data;
+      }
+
+      function setBusy(isBusy) {
+        state.busy = isBusy;
+        document.querySelector("#historyPanel").classList.toggle("loading", isBusy);
       }
 
       function escapeHtml(value) {
@@ -644,6 +968,44 @@ const ADMIN_HTML = String.raw`<!doctype html>
         });
       }
 
+      function renderGitPanel() {
+        const status = state.gitStatus || {};
+        const badge = document.querySelector("#gitBranchBadge");
+        const statusText = document.querySelector("#gitStatusText");
+        const timeline = document.querySelector("#gitTimeline");
+        const dirtyText = status.dirty ? "Unsaved Git changes" : "Clean working tree";
+        const rewriteText = status.historyRewritten ? " · rewrite pending" : "";
+
+        badge.textContent = status.branch || "master";
+        badge.classList.toggle("warning", Boolean(status.dirty || status.historyRewritten));
+        statusText.textContent = dirtyText + rewriteText;
+
+        timeline.innerHTML = state.gitHistory.map((commit) => (
+          '<article class="commit-card" title="' + escapeHtml(commit.hash) + '">' +
+            "<strong>" + escapeHtml(commit.subject) + "</strong>" +
+            "<span>" + escapeHtml(commit.shortHash) + " · " + escapeHtml(commit.relativeTime) + " · " + escapeHtml(commit.author) + "</span>" +
+          "</article>"
+        )).join("");
+      }
+
+      async function loadGit() {
+        const data = await api("/api/git/history?limit=8");
+        state.gitHistory = data.commits || [];
+        state.gitStatus = data.status || null;
+        renderGitPanel();
+      }
+
+      async function saveCurrentPost() {
+        const data = await api("/api/posts", {
+          method: "POST",
+          body: JSON.stringify({ originalSlug: state.originalSlug, post: readForm() })
+        });
+        state.posts = data.posts;
+        selectPost(data.post);
+        await loadGit();
+        return data;
+      }
+
       async function load() {
         const [diagnostics, postsData] = await Promise.all([
           api("/api/diagnostics"),
@@ -657,6 +1019,7 @@ const ADMIN_HTML = String.raw`<!doctype html>
         ].map(escapeHtml).join("<br />");
         renderList();
         selectPost(state.posts[0] || emptyPost());
+        await loadGit();
       }
 
       document.querySelector("#newButton").addEventListener("click", () => selectPost(emptyPost()));
@@ -676,13 +1039,20 @@ const ADMIN_HTML = String.raw`<!doctype html>
 
       document.querySelector("#editorForm").addEventListener("submit", async (event) => {
         event.preventDefault();
-        const data = await api("/api/posts", {
-          method: "POST",
-          body: JSON.stringify({ originalSlug: state.originalSlug, post: readForm() })
-        });
-        state.posts = data.posts;
-        selectPost(data.post);
+        await saveCurrentPost();
         showToast("Saved to src/data/posts.json.");
+      });
+
+      document.querySelector("#draftButton").addEventListener("click", async () => {
+        try {
+          setBusy(true);
+          await saveCurrentPost();
+          showToast("Draft saved without committing.");
+        } catch (error) {
+          showToast(error.message);
+        } finally {
+          setBusy(false);
+        }
       });
 
       document.querySelector("#deleteButton").addEventListener("click", async () => {
@@ -692,19 +1062,80 @@ const ADMIN_HTML = String.raw`<!doctype html>
         });
         state.posts = data.posts;
         selectPost(state.posts[0] || emptyPost());
+        await loadGit();
         showToast("Deleted.");
       });
 
       document.querySelector("#publishButton").addEventListener("click", async () => {
         const data = await api("/api/publish", {
           method: "POST",
-          body: JSON.stringify({ message: fields.commit.value })
+          body: JSON.stringify({
+            message: fields.commit.value,
+            force: Boolean(state.gitStatus && state.gitStatus.historyRewritten)
+          })
         });
+        await loadGit();
         showToast([
           data.add.command,
           data.commit.skipped ? data.commit.stderr : data.commit.stdout,
           data.push.stdout || data.push.stderr || data.push.command
         ].filter(Boolean).join("\n"));
+      });
+
+      document.querySelector("#amendButton").addEventListener("click", async () => {
+        try {
+          setBusy(true);
+          const data = await api("/api/git/amend", {
+            method: "POST",
+            body: JSON.stringify({ message: fields.amendMessage.value })
+          });
+          await loadGit();
+          showToast(data.commit.stdout || data.commit.stderr || "Amended latest commit.");
+        } catch (error) {
+          showToast(error.message);
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      document.querySelector("#squashButton").addEventListener("click", async () => {
+        const count = Number(fields.squashCount.value || 2);
+        const message = fields.squashMessage.value.trim() || window.prompt("New squash commit message", "Update blog content");
+        if (!message) return;
+
+        try {
+          setBusy(true);
+          const data = await api("/api/git/squash", {
+            method: "POST",
+            body: JSON.stringify({ count, message })
+          });
+          state.gitHistory = data.history.commits || [];
+          state.gitStatus = data.status || data.history.status || null;
+          renderGitPanel();
+          showToast(data.commit.stdout || "Squashed recent commits.");
+        } catch (error) {
+          showToast(error.message);
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      document.querySelector("#gitPushButton").addEventListener("click", async () => {
+        try {
+          setBusy(true);
+          const data = await api("/api/git/push", {
+            method: "POST",
+            body: JSON.stringify({
+              force: Boolean(state.gitStatus && state.gitStatus.historyRewritten)
+            })
+          });
+          await loadGit();
+          showToast((data.forced ? "Force-with-lease push complete.\n" : "Push complete.\n") + (data.push.stdout || data.push.stderr || data.push.command));
+        } catch (error) {
+          showToast(error.message);
+        } finally {
+          setBusy(false);
+        }
       });
 
       load().catch((error) => showToast(error.message));
@@ -721,6 +1152,11 @@ createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "GET" && (url.pathname === "/favicon.svg" || url.pathname === "/favicon.ico")) {
+      await sendFavicon(response);
+      return;
+    }
+
     if (url.pathname.startsWith("/api/")) {
       await routeApi(request, response, url);
       return;
@@ -730,7 +1166,7 @@ createServer(async (request, response) => {
   } catch (error) {
     sendJson(response, error.status || 500, {
       error: error.message || "Internal server error.",
-      details: error.result || undefined
+      details: error.result || error.details || undefined
     });
   }
 }).listen(PORT, "127.0.0.1", () => {

@@ -60,6 +60,11 @@ src/data/posts.json -> src/content.ts -> src/App.tsx
 - `Save` 会校验并写回 JSON。
 - `Delete` 会从 JSON 中删除当前文章。
 - `Publish` 会执行 Git 发布流程。
+- `Git History` 面板会展示最近提交、工作区状态和历史重写状态。
+- `Save Draft` 只保存文章数据，不创建 Git 提交。
+- `Amend` 会把当前工作区改动覆盖到上一条提交。
+- `Squash` 会把最近 N 条提交合并为一条新提交。
+- `Push` 会在历史被重写后自动使用 `--force-with-lease`。
 
 ## 文章数据格式
 
@@ -101,6 +106,11 @@ GET    /api/posts
 POST   /api/posts
 DELETE /api/posts/:slug
 POST   /api/publish
+GET    /api/git/status
+GET    /api/git/history
+POST   /api/git/amend
+POST   /api/git/squash
+POST   /api/git/push
 ```
 
 `POST /api/posts` 请求体：
@@ -130,6 +140,63 @@ POST   /api/publish
 }
 ```
 
+`GET /api/git/history` 返回最近提交：
+
+```json
+{
+  "commits": [
+    {
+      "hash": "full-hash",
+      "shortHash": "abc1234",
+      "subject": "Update blog content",
+      "relativeTime": "2 minutes ago",
+      "author": "Gwanhyn"
+    }
+  ],
+  "status": {
+    "branch": "master",
+    "dirty": false,
+    "entries": [],
+    "historyRewritten": false
+  }
+}
+```
+
+`POST /api/git/amend` 请求体：
+
+```json
+{
+  "message": "Update latest blog content"
+}
+```
+
+`message` 为空时会执行 `git commit --amend --no-edit`。后台会先执行 `git add -A`，因此当前工作区改动会进入被覆盖的上一条提交。
+
+`POST /api/git/squash` 请求体：
+
+```json
+{
+  "count": 3,
+  "message": "Clean blog content updates"
+}
+```
+
+也可以传入 `targetHash`，后端会计算从该提交到 `HEAD` 的提交数量。Squash 会要求工作区干净，避免把未保存草稿混入历史重写。
+
+`POST /api/git/push` 请求体：
+
+```json
+{
+  "force": true
+}
+```
+
+如果后台检测到已经执行过 amend 或 squash，即使 `force` 未传入，也会自动使用：
+
+```bash
+git push --force-with-lease origin master
+```
+
 ## 发布流程
 
 点击后台 `Publish` 后会在项目根目录执行：
@@ -140,7 +207,7 @@ git commit -m "<message>"
 git push origin master
 ```
 
-如果没有本地变更，commit 会被跳过，但 push 仍会执行。部署到 GitHub Pages 仍由项目根目录的命令负责：
+如果没有本地变更，commit 会被跳过，但 push 仍会执行。如果最近执行过 amend 或 squash，后台会自动改用 `git push --force-with-lease origin master`。部署到 GitHub Pages 仍由项目根目录的命令负责：
 
 ```bash
 npm run deploy
@@ -152,4 +219,6 @@ npm run deploy
 - 后台只绑定 `127.0.0.1`，不面向公网。
 - 正文 HTML 会移除 `<script>` 和内联事件属性，降低误写脚本的风险。
 - 保存前请确认 `slug` 唯一；重复 slug 会返回 `409`。
+- Squash 会使用 `git reset --soft HEAD~N`，只建议在本地尚未和他人协作的分支上使用。
+- Rewrite 后 Push 会使用 `--force-with-lease`，比普通 force push 更安全，但仍然会改写远端历史。
 - 发布前建议先运行 `npm run build:pages`，确认静态站点可以正常构建。
