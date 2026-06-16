@@ -87,6 +87,7 @@ POST   /api/markdown/preview
 POST   /api/publish
 GET    /api/git/status
 GET    /api/git/history
+POST   /api/git/commit
 POST   /api/git/amend
 POST   /api/git/squash
 POST   /api/git/push
@@ -132,15 +133,20 @@ The response includes rendered, sanitized HTML and plain text:
 
 `Save` writes `src/data/posts.json` only.
 
-`Save and Publish` runs:
+`Save & Commit` runs:
 
 ```bash
 git add -A
 git commit -m "<message>"
-git push origin master
 ```
 
-If there are no local changes, commit is skipped and push still runs.
+If there are no local changes, commit is skipped. It does not push.
+
+`Push` is a separate Git History action. It runs:
+
+```bash
+git push origin master
+```
 
 The Git History panel has its own refresh button. It calls only `GET /api/git/history`, so refreshing history does not reload the editor or article list.
 
@@ -171,6 +177,8 @@ After amend or squash, the backend marks history as rewritten. The next push use
 ```bash
 git push --force-with-lease origin master
 ```
+
+If the local branch has been intentionally rewritten and diverges from `origin/master`, the backend also uses `--force-with-lease` for the next push.
 
 ## Notes
 

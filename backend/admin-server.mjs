@@ -289,13 +289,28 @@ function parseGitHistory(output) {
 }
 
 async function gitStatus() {
-  const [branch, status] = await Promise.all([
+  const [branch, status, upstreamResult] = await Promise.all([
     runGit(["branch", "--show-current"]),
-    runGit(["status", "--porcelain"])
+    runGit(["status", "--porcelain"]),
+    runGit(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]).catch(() => null)
   ]);
+  const upstream = upstreamResult?.stdout || "";
+  let ahead = 0;
+  let behind = 0;
+
+  if (upstream) {
+    const counts = await runGit(["rev-list", "--left-right", "--count", `${upstream}...HEAD`]);
+    const [behindCount, aheadCount] = counts.stdout.split(/\s+/).map(Number);
+    behind = Number.isFinite(behindCount) ? behindCount : 0;
+    ahead = Number.isFinite(aheadCount) ? aheadCount : 0;
+  }
 
   return {
     branch: branch.stdout || "master",
+    upstream,
+    ahead,
+    behind,
+    diverged: ahead > 0 && behind > 0,
     dirty: Boolean(status.stdout),
     entries: status.stdout ? status.stdout.split("\n") : [],
     historyRewritten
@@ -384,7 +399,8 @@ async function squashCommits(payload) {
 }
 
 async function pushToRemote(force = false) {
-  const shouldForce = Boolean(force || historyRewritten);
+  const status = await gitStatus();
+  const shouldForce = Boolean(force || status.historyRewritten || status.diverged);
   const args = shouldForce
     ? ["push", "--force-with-lease", "origin", "master"]
     : ["push", "origin", "master"];
@@ -393,7 +409,7 @@ async function pushToRemote(force = false) {
   return { push, forced: shouldForce, status: await gitStatus() };
 }
 
-async function publish(message, options = {}) {
+async function commitChanges(message) {
   const commitMessage = String(message || "Update blog content").trim();
   const add = await runGit(["add", "-A"]);
   const status = await runGit(["status", "--porcelain"]);
@@ -408,14 +424,11 @@ async function publish(message, options = {}) {
     commit = await runGit(["commit", "-m", commitMessage]);
   }
 
-  const pushResult = await pushToRemote(options.force);
   return {
     add,
     status,
     commit,
-    push: pushResult.push,
-    forced: pushResult.forced,
-    gitStatus: pushResult.status
+    gitStatus: await gitStatus()
   };
 }
 
@@ -459,9 +472,9 @@ async function routeApi(request, response, url) {
     return;
   }
 
-  if (request.method === "POST" && url.pathname === "/api/publish") {
+  if (request.method === "POST" && (url.pathname === "/api/git/commit" || url.pathname === "/api/publish")) {
     const payload = JSON.parse(await readRequestBody(request) || "{}");
-    sendJson(response, 200, await publish(payload.message, { force: payload.force }));
+    sendJson(response, 200, await commitChanges(payload.message));
     return;
   }
 

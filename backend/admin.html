@@ -111,6 +111,7 @@
 
       .task-group {
         display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
         padding: 12px 0;
         border-bottom: 1px solid rgba(23, 33, 36, 0.1);
@@ -128,18 +129,58 @@
       }
 
       .task-button {
-        display: flex;
+        display: grid;
         width: 100%;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 0 11px;
+        min-height: 78px;
+        align-content: space-between;
+        gap: 8px;
+        overflow: hidden;
+        padding: 12px;
         text-align: left;
       }
 
       .task-button span:first-child {
-        color: #50808e;
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border-radius: 8px;
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.18);
+        font-size: 0.86rem;
         font-weight: 900;
+      }
+
+      .task-button strong {
+        color: #ffffff;
+        font-size: 1rem;
+        line-height: 1.1;
+      }
+
+      .task-button small {
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 0.68rem;
+        line-height: 1.2;
+      }
+
+      .task-button.new {
+        border-color: transparent;
+        background: #50808e;
+      }
+
+      .task-button.save {
+        border-color: transparent;
+        background: #4f7d52;
+      }
+
+      .task-button.delete {
+        border-color: transparent;
+        background: #a84d5b;
+      }
+
+      .task-button.refresh {
+        border-color: transparent;
+        background: #d28a32;
       }
 
       .button {
@@ -172,6 +213,14 @@
       .icon-button:hover {
         border-color: rgba(80, 128, 142, 0.42);
         box-shadow: 0 8px 24px rgba(80, 128, 142, 0.12);
+      }
+
+      .icon-button svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        stroke-width: 2.2;
+        fill: none;
       }
 
       .rail-meta {
@@ -748,10 +797,10 @@
         </header>
 
         <div class="task-group">
-          <button class="task-button" id="newButton" type="button"><span>新</span><strong>新建文章</strong></button>
-          <button class="task-button" id="saveTaskButton" type="button"><span>存</span><strong>保存草稿</strong></button>
-          <button class="task-button" id="deleteButton" type="button"><span>删</span><strong>删除文章</strong></button>
-          <button class="task-button" id="refreshButton" type="button"><span>刷</span><strong>刷新文章</strong></button>
+          <button class="task-button new" id="newButton" type="button"><span>+</span><strong>New</strong><small>新建文章</small></button>
+          <button class="task-button save" id="saveTaskButton" type="button"><span>S</span><strong>Save</strong><small>保存草稿</small></button>
+          <button class="task-button delete" id="deleteButton" type="button"><span>D</span><strong>Delete</strong><small>删除文章</small></button>
+          <button class="task-button refresh" id="refreshButton" type="button"><span>R</span><strong>Refresh</strong><small>刷新文章</small></button>
         </div>
 
         <div class="rail-meta">
@@ -780,8 +829,8 @@
               <p id="editorStateText">等待载入</p>
             </div>
             <div class="head-actions">
-              <button class="button" id="saveHeadButton" type="submit">保存</button>
-              <button class="button primary" id="publishHeadButton" type="button">发布</button>
+              <button class="button" id="saveHeadButton" type="submit">Save</button>
+              <button class="button primary" id="commitHeadButton" type="button">Save & Commit</button>
             </div>
           </div>
 
@@ -860,9 +909,9 @@
           </div>
 
           <div class="publish-dock">
-            <input id="dockCommitInput" value="Update blog content" aria-label="发布提交信息" />
-            <button class="button" id="saveDockButton" type="submit">保存</button>
-            <button class="button primary" id="publishButton" type="button">保存并发布</button>
+            <input id="dockCommitInput" value="Update blog content" aria-label="提交信息" />
+            <button class="button" id="saveDockButton" type="submit">Save</button>
+            <button class="button primary" id="commitButton" type="button">Save & Commit</button>
           </div>
         </form>
       </section>
@@ -873,7 +922,14 @@
             <h2>Git 历史</h2>
             <p id="gitStatusText">加载中</p>
           </div>
-          <button class="icon-button" id="historyRefreshButton" type="button" title="刷新历史">刷</button>
+          <button class="icon-button" id="historyRefreshButton" type="button" title="刷新历史" aria-label="刷新 Git 历史">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 12a9 9 0 0 1-15.5 6.2" />
+              <path d="M3 12A9 9 0 0 1 18.5 5.8" />
+              <path d="M18 2v4h-4" />
+              <path d="M6 22v-4h4" />
+            </svg>
+          </button>
         </header>
 
         <div class="status-line">
@@ -884,14 +940,14 @@
         <div class="git-tools">
           <div class="tool-row">
             <input id="amendMessageInput" placeholder="修正提交信息，可留空" />
-            <button class="button" id="amendButton" type="button">修正</button>
+            <button class="button" id="amendButton" type="button">Amend</button>
           </div>
           <div class="tool-row compact">
             <input id="squashCountInput" type="number" min="2" value="2" aria-label="合并数量" />
             <input id="squashMessageInput" placeholder="新的合并提交信息" />
-            <button class="button" id="squashButton" type="button">合并</button>
+            <button class="button" id="squashButton" type="button">Squash</button>
           </div>
-          <button class="button primary" id="gitPushButton" type="button">推送到远端</button>
+          <button class="button primary" id="gitPushButton" type="button">Push</button>
         </div>
 
         <div class="timeline" id="gitTimeline"></div>
@@ -1099,13 +1155,17 @@
         const statusText = document.querySelector("#gitStatusText");
         const timeline = document.querySelector("#gitTimeline");
         const dirtyText = status.dirty ? "有未提交改动" : "工作区干净";
-        const rewriteText = status.historyRewritten ? "，历史已重写待推送" : "";
+        const syncParts = [];
+        if (status.ahead) syncParts.push("领先 " + status.ahead);
+        if (status.behind) syncParts.push("落后 " + status.behind);
+        const syncText = syncParts.length ? "，" + syncParts.join(" / ") : "";
+        const rewriteText = status.historyRewritten || status.diverged ? "，推送将使用 force-with-lease" : "";
 
         badge.textContent = status.branch || "master";
         dirtyBadge.textContent = dirtyText;
-        dirtyBadge.classList.toggle("warning", Boolean(status.dirty || status.historyRewritten));
-        badge.classList.toggle("warning", Boolean(status.historyRewritten));
-        statusText.textContent = dirtyText + rewriteText;
+        dirtyBadge.classList.toggle("warning", Boolean(status.dirty || status.historyRewritten || status.diverged));
+        badge.classList.toggle("warning", Boolean(status.historyRewritten || status.diverged));
+        statusText.textContent = dirtyText + syncText + rewriteText;
 
         timeline.innerHTML = state.gitHistory.map((commit) => (
           '<article class="commit-card" title="' + escapeHtml(commit.hash) + '">' +
@@ -1247,25 +1307,21 @@
         }
       });
 
-      async function publishCurrentPost() {
+      async function saveAndCommitCurrentPost() {
         await saveCurrentPost();
-        const data = await api("/api/publish", {
+        const data = await api("/api/git/commit", {
           method: "POST",
-          body: JSON.stringify({
-            message: getCommitMessage(),
-            force: Boolean(state.gitStatus && state.gitStatus.historyRewritten)
-          })
+          body: JSON.stringify({ message: getCommitMessage() })
         });
         await loadGit();
         showToast([
           data.add.command,
-          data.commit.skipped ? data.commit.stderr : data.commit.stdout,
-          data.push.stdout || data.push.stderr || data.push.command
+          data.commit.skipped ? data.commit.stderr : data.commit.stdout
         ].filter(Boolean).join("\n"));
       }
 
-      document.querySelector("#publishButton").addEventListener("click", () => publishCurrentPost().catch((error) => showToast(error.message)));
-      document.querySelector("#publishHeadButton").addEventListener("click", () => publishCurrentPost().catch((error) => showToast(error.message)));
+      document.querySelector("#commitButton").addEventListener("click", () => saveAndCommitCurrentPost().catch((error) => showToast(error.message)));
+      document.querySelector("#commitHeadButton").addEventListener("click", () => saveAndCommitCurrentPost().catch((error) => showToast(error.message)));
 
       document.querySelector("#amendButton").addEventListener("click", async () => {
         try {
