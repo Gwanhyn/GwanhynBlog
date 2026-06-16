@@ -11,6 +11,7 @@ import {
   Search,
   Sun,
   Tag,
+  X,
   UserRound
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -50,6 +51,7 @@ function App() {
   const [view, setView] = useState<View>("home");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -206,6 +208,7 @@ function App() {
                 query={query}
                 setCategory={setCategory}
                 setQuery={setQuery}
+                onPostOpen={setSelectedPost}
               />
             )}
 
@@ -230,6 +233,10 @@ function App() {
         <span>© {new Date().getFullYear()} {profile.name}</span>
         <span>Built with React and Vite</span>
       </footer>
+
+      {selectedPost && (
+        <ArticleDialog post={selectedPost} onClose={() => setSelectedPost(null)} />
+      )}
     </>
   );
 }
@@ -239,6 +246,7 @@ type HomeViewProps = {
   category: string;
   filteredPosts: Post[];
   query: string;
+  onPostOpen: (post: Post) => void;
   setCategory: (category: string) => void;
   setQuery: (query: string) => void;
 };
@@ -247,6 +255,7 @@ function HomeView({
   categories,
   category,
   filteredPosts,
+  onPostOpen,
   query,
   setCategory,
   setQuery
@@ -304,7 +313,13 @@ function HomeView({
                   {post.minutes} min
                 </span>
               </div>
-              <h3>{post.title}</h3>
+              <button
+                className="post-title-button"
+                type="button"
+                onClick={() => onPostOpen(post)}
+              >
+                {post.title}
+              </button>
               <p>{post.excerpt}</p>
               <div className="tag-row">
                 {post.tags.map((tag) => (
@@ -319,6 +334,10 @@ function HomeView({
               <FolderOpen size={16} />
               <span>{post.category}</span>
             </div>
+            <button className="read-button" type="button" onClick={() => onPostOpen(post)}>
+              <BookOpen size={16} />
+              <span>Read</span>
+            </button>
           </article>
         ))}
       </div>
@@ -425,6 +444,47 @@ function AboutView() {
         </div>
       </section>
     </>
+  );
+}
+
+function ArticleDialog({ post, onClose }: { post: Post; onClose: () => void }) {
+  return (
+    <div className="dialog-backdrop" role="presentation" onClick={onClose}>
+      <article
+        className="article-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="article-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button className="dialog-close" type="button" aria-label="Close article" onClick={onClose}>
+          <X size={18} />
+        </button>
+        <div className="post-meta">
+          <span>
+            <CalendarDays size={15} />
+            {formatDate(post.date)}
+          </span>
+          <span>
+            <FolderOpen size={15} />
+            {post.category}
+          </span>
+        </div>
+        <h2 id="article-title">{post.title}</h2>
+        <div className="tag-row">
+          {post.tags.map((tag) => (
+            <span key={tag}>
+              <Tag size={13} />
+              {tag}
+            </span>
+          ))}
+        </div>
+        <div
+          className="article-body"
+          dangerouslySetInnerHTML={{ __html: post.body || `<p>${post.excerpt}</p>` }}
+        />
+      </article>
+    </div>
   );
 }
 

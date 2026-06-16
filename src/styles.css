@@ -316,7 +316,6 @@ a {
 .side-panel h3,
 .stats,
 .section-heading h2,
-.post-card h3,
 .timeline-year h3,
 .timeline-item h4,
 .about-panel p {
@@ -536,11 +535,25 @@ a {
   gap: 6px;
 }
 
-.post-card h3 {
+.post-title-button {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.post-title-button {
   margin-top: 10px;
   color: var(--text-strong);
   font-size: 1.36rem;
+  font-weight: 800;
   line-height: 1.32;
+}
+
+.post-title-button:hover {
+  color: var(--primary-strong);
 }
 
 .post-card p {
@@ -569,6 +582,92 @@ a {
   background: var(--surface-muted);
   font-size: 0.9rem;
   font-weight: 750;
+}
+
+.read-button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  grid-column: 1 / -1;
+  justify-self: start;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--text-strong);
+  background: var(--surface-muted);
+  font-weight: 750;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(10, 18, 22, 0.35);
+  backdrop-filter: blur(12px);
+}
+
+.article-dialog {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 28px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(22px);
+}
+
+.dialog-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text-strong);
+  background: var(--surface-muted);
+}
+
+.article-dialog h2 {
+  max-width: 640px;
+  margin: 14px 0 0;
+  color: var(--text-strong);
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+.article-body {
+  margin-top: 24px;
+  color: var(--text);
+  line-height: 1.9;
+}
+
+.article-body p,
+.article-body ul,
+.article-body ol,
+.article-body blockquote {
+  margin: 0 0 16px;
+}
+
+.article-body ul,
+.article-body ol {
+  padding-left: 22px;
+}
+
+.article-body blockquote {
+  border-left: 4px solid var(--primary);
+  padding: 8px 0 8px 16px;
+  color: var(--muted);
 }
 
 .timeline,
