@@ -1,4 +1,4 @@
-# Gwanhy Blog
+# Gwanhyn Blog
 
 一个基于 React、TypeScript 和 Vite 的个人博客应用。当前分支把借鉴仓库中的静态生成产物收敛为可开发、可构建、可预览的源码项目。
 

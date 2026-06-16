@@ -10,7 +10,7 @@ export type Post = {
 };
 
 export const profile = {
-  name: "Gwanhy",
+  name: "Gwanhyn",
   title: "Student / Builder",
   location: "China",
   bio: "记录工程实践、课程复盘和生活里值得留下的小片段。",

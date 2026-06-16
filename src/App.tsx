@@ -27,7 +27,7 @@ const navItems: Array<{ view: View; label: string; icon: typeof Home }> = [
 ];
 
 function getInitialTheme(): Theme {
-  const saved = window.localStorage.getItem("gwanhy-theme");
+  const saved = window.localStorage.getItem("gwanhyn-theme");
   if (saved === "light" || saved === "dark") {
     return saved;
   }
@@ -53,7 +53,7 @@ function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("gwanhy-theme", theme);
+    window.localStorage.setItem("gwanhyn-theme", theme);
   }, [theme]);
 
   const categories = useMemo(() => {
@@ -98,10 +98,10 @@ function App() {
           className="brand"
           type="button"
           onClick={() => changeView("home")}
-          title="Gwanhy Blog"
+          title="Gwanhyn Blog"
         >
           <span className="brand-mark">G</span>
-          <span>Gwanhy Blog</span>
+          <span>Gwanhyn Blog</span>
         </button>
 
         <nav className="nav-links" aria-label="Primary navigation">
@@ -138,7 +138,7 @@ function App() {
           <div className="hero-overlay" />
           <div className="hero-content">
             <p className="eyebrow">Personal notes and engineering logs</p>
-            <h1>Gwanhy Blog</h1>
+            <h1>Gwanhyn Blog</h1>
             <p className="hero-subtitle">Never give up. Keep shipping, keep learning.</p>
             <div className="hero-actions" aria-label="Hero links">
               <button className="hero-button" type="button" onClick={() => changeView("home")}>
