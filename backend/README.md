@@ -1,59 +1,78 @@
-# Gwanhyn Blog Local Admin
+# Gwanhyn Blog 本地后台
 
-`backend/admin-server.mjs` provides the local-only admin backend for Gwanhyn Blog. It binds to `127.0.0.1`, reads and writes the blog JSON data file, renders Markdown previews, and exposes guarded Git actions for publishing local changes.
+`backend/admin-server.mjs` 是 Gwanhyn Blog 的本地管理后台，只监听 `127.0.0.1`，用来编辑文章、导入 Markdown、预览内容，并在需要时处理 Git 提交和推送。
 
-## Start
+## 启动
 
-Run from the project root:
+在项目根目录运行：
 
 ```bash
 npm run admin
 ```
 
-Default address:
+默认地址：
 
 ```text
 http://127.0.0.1:8787/admin
 ```
 
-Temporary port override in PowerShell:
+如果想临时换端口：
 
 ```powershell
 $env:ADMIN_PORT=8788; npm run admin
 ```
 
-## Layout
+## 页面布局
 
-The admin page uses a fixed three-column workspace:
+后台分成三栏：
 
-- Left: task rail and article list.
-- Middle: article metadata, TXT/MD import, Markdown input, and Markdown preview.
-- Right: Git history, rewrite controls, refresh, and push.
+- 左侧：任务栏和文章列表。
+- 中间：文章信息、文件导入、Markdown 输入和预览。
+- 右侧：Git 历史、修正、合并和推送。
 
-Each column owns its own scroll area, so the full page does not move while editing long content or browsing long Git history.
+每一栏都是独立滚动区，长文章和长历史不会带着整页一起滚。
 
-## Article Editing
+## 文章字段说明
 
-Articles are stored in:
+文章数据保存在：
 
 ```text
 src/data/posts.json
 ```
 
-Frontend render flow:
+前台读取链路：
 
 ```text
 src/data/posts.json -> src/content.ts -> src/App.tsx
 ```
 
-The editor writes both fields:
+后台保存时会同时写入：
 
-- `markdown`: source text for future editing.
-- `body`: sanitized HTML generated from Markdown for frontend rendering.
+- `markdown`：文章的原始 Markdown，方便后续继续修改。
+- `body`：由 Markdown 转出来并清理过的 HTML，用于前台直接显示。
 
-TXT, MD, and Markdown files can be imported from the middle panel. Imported text is treated as Markdown regardless of file extension. The editor can infer a title from the first `# Heading`, create a slug, create an excerpt, and estimate reading minutes.
+### 字段含义
 
-## Article Schema
+- `标题`：文章名称，不能为空。
+- `地址别名`：文章在网址里的唯一标识，也叫 slug。建议只用英文小写、数字和 `-`，例如 `buildable-blog`。它会影响文章地址、编辑定位和删除定位，后面改这个字段等于改文章链接。
+- `发布日期`：`YYYY-MM-DD` 格式。
+- `分类`：文章所属分类。
+- `标签`：逗号分隔的标签。
+- `摘要`：首页列表里的短简介，留空时会从正文截取。
+- `强调色`：文章卡片颜色。
+- `阅读分钟`：显示在前台文章卡片上的估算阅读时间。
+
+### 导入文件
+
+中间栏支持导入：
+
+- `.txt`
+- `.md`
+- `.markdown`
+
+导入后会按 Markdown 解析，直接写入正文。文本里的第一条 `# 标题` 会被优先当成文章标题。
+
+## 文章结构
 
 ```json
 {
@@ -64,13 +83,13 @@ TXT, MD, and Markdown files can be imported from the middle panel. Imported text
   "tags": ["React", "Blog"],
   "excerpt": "Short summary.",
   "body": "<p>Rendered HTML.</p>",
-  "markdown": "Markdown source.",
+  "markdown": "# Example Post",
   "minutes": 3,
   "accent": "teal"
 }
 ```
 
-Valid `accent` values:
+`accent` 目前支持：
 
 ```text
 teal, orange, gold, ink
@@ -84,7 +103,6 @@ GET    /api/posts
 POST   /api/posts
 DELETE /api/posts/:slug
 POST   /api/markdown/preview
-POST   /api/publish
 GET    /api/git/status
 GET    /api/git/history
 POST   /api/git/commit
@@ -93,7 +111,7 @@ POST   /api/git/squash
 POST   /api/git/push
 ```
 
-`POST /api/posts` request body:
+`POST /api/posts` 请求体：
 
 ```json
 {
@@ -112,7 +130,7 @@ POST   /api/git/push
 }
 ```
 
-`POST /api/markdown/preview` request body:
+`POST /api/markdown/preview` 请求体：
 
 ```json
 {
@@ -120,7 +138,7 @@ POST   /api/git/push
 }
 ```
 
-The response includes rendered, sanitized HTML and plain text:
+返回值里会带：
 
 ```json
 {
@@ -129,61 +147,59 @@ The response includes rendered, sanitized HTML and plain text:
 }
 ```
 
-## Git Workflow
+## Git 操作
 
-`Save` writes `src/data/posts.json` only.
+`Save` 只写文章数据文件，不提交 Git。
 
-`Save & Commit` runs:
+`Save & Commit` 只做：
 
 ```bash
 git add -A
 git commit -m "<message>"
 ```
 
-If there are no local changes, commit is skipped. It does not push.
+它不会自动 push。
 
-`Push` is a separate Git History action. It runs:
+`Push` 是单独的操作按钮，才会执行：
 
 ```bash
 git push origin master
 ```
 
-The Git History panel has its own refresh button. It calls only `GET /api/git/history`, so refreshing history does not reload the editor or article list.
+右侧历史栏里的刷新按钮只刷新 Git 历史，不会重新加载文章表单。
 
-## History Rewriting
+## 历史改写
 
-`Amend` runs:
+`Amend` 会执行：
 
 ```bash
 git add -A
 git commit --amend
 ```
 
-If the message field is empty, it uses:
+如果提交信息为空，则使用：
 
 ```bash
 git commit --amend --no-edit
 ```
 
-`Squash` requires a clean working tree, then runs:
+`Squash` 要求工作区干净，然后执行：
 
 ```bash
 git reset --soft HEAD~N
 git commit -m "<new message>"
 ```
 
-After amend or squash, the backend marks history as rewritten. The next push uses:
+如果本地历史已经改写，或者本地和远端已经分叉，下一次 push 会自动使用：
 
 ```bash
 git push --force-with-lease origin master
 ```
 
-If the local branch has been intentionally rewritten and diverges from `origin/master`, the backend also uses `--force-with-lease` for the next push.
+## 注意
 
-## Notes
-
-- This backend is a local tool and is not included in the Vite/GitHub Pages build.
-- The server binds only to `127.0.0.1`.
-- Markdown output is sanitized by removing scripts, iframes, inline event handlers, and `javascript:` links before saving.
-- Duplicate slugs return `409`.
-- Squash and amend rewrite Git history. Use them only when you intend to rewrite the local branch before pushing.
+- 这是本地工具，不会进 Vite/GitHub Pages 构建。
+- 后台只监听 `127.0.0.1`。
+- Markdown 输出会先清理脚本、`iframe`、内联事件和 `javascript:` 链接，再写入文章数据。
+- 地址别名重复会返回 `409`。
+- `Amend` 和 `Squash` 会改写历史，推送前请确认这是你想要的结果。
