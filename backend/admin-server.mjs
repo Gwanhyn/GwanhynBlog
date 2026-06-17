@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import katex from "katex";
 import { marked } from "marked";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -10,8 +11,15 @@ const ROOT = path.resolve(__dirname, "..");
 const ADMIN_HTML_FILE = path.join(__dirname, "admin.html");
 const DATA_FILE = path.join(ROOT, "src", "data", "posts.json");
 const FAVICON_FILE = path.join(ROOT, "public", "favicon.svg");
+const KATEX_CSS_FILE = path.join(ROOT, "node_modules", "katex", "dist", "katex.min.css");
+const KATEX_FONT_DIR = path.join(ROOT, "node_modules", "katex", "dist", "fonts");
 const PORT = Number(process.env.ADMIN_PORT || 8787);
 const ACCENTS = new Set(["teal", "orange", "gold", "ink"]);
+const FONT_CONTENT_TYPES = new Map([
+  [".woff2", "font/woff2"],
+  [".woff", "font/woff"],
+  [".ttf", "font/ttf"]
+]);
 let historyRewritten = false;
 
 marked.setOptions({
@@ -46,6 +54,33 @@ async function sendFavicon(response) {
     "cache-control": "public, max-age=3600"
   });
   response.end(icon);
+}
+
+async function sendKatexCss(response) {
+  const css = await readFile(KATEX_CSS_FILE, "utf8");
+  response.writeHead(200, {
+    "content-type": "text/css; charset=utf-8",
+    "cache-control": "public, max-age=3600"
+  });
+  response.end(css);
+}
+
+async function sendKatexFont(response, filename) {
+  const safeName = path.basename(filename);
+  const ext = path.extname(safeName).toLowerCase();
+  const contentType = FONT_CONTENT_TYPES.get(ext);
+
+  if (!contentType || safeName !== filename) {
+    notFound(response);
+    return;
+  }
+
+  const font = await readFile(path.join(KATEX_FONT_DIR, safeName));
+  response.writeHead(200, {
+    "content-type": contentType,
+    "cache-control": "public, max-age=31536000, immutable"
+  });
+  response.end(font);
 }
 
 function readRequestBody(request) {
@@ -107,13 +142,160 @@ function normalizeMarkdown(value) {
     .trim();
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function isEscaped(source, index) {
+  let slashCount = 0;
+  for (let cursor = index - 1; cursor >= 0 && source[cursor] === "\\"; cursor -= 1) {
+    slashCount += 1;
+  }
+  return slashCount % 2 === 1;
+}
+
+function protectCodeSegments(source) {
+  const segments = [];
+  let output = "";
+  let index = 0;
+
+  const stash = (segment) => {
+    const token = `@@GWB_CODE_${segments.length}@@`;
+    segments.push(segment);
+    return token;
+  };
+
+  while (index < source.length) {
+    if (source[index] === "`") {
+      let endOfRun = index;
+      while (source[endOfRun] === "`") {
+        endOfRun += 1;
+      }
+
+      const delimiter = source.slice(index, endOfRun);
+      const close = source.indexOf(delimiter, endOfRun);
+      if (close !== -1) {
+        output += stash(source.slice(index, close + delimiter.length));
+        index = close + delimiter.length;
+        continue;
+      }
+    }
+
+    if ((index === 0 || source[index - 1] === "\n") && source.startsWith("~~~", index)) {
+      let endOfRun = index;
+      while (source[endOfRun] === "~") {
+        endOfRun += 1;
+      }
+
+      const delimiter = source.slice(index, endOfRun);
+      const close = source.indexOf(`\n${delimiter}`, endOfRun);
+      if (close !== -1) {
+        const closeLineEnd = source.indexOf("\n", close + 1);
+        const end = closeLineEnd === -1 ? source.length : closeLineEnd;
+        output += stash(source.slice(index, end));
+        index = end;
+        continue;
+      }
+    }
+
+    output += source[index];
+    index += 1;
+  }
+
+  return { text: output, segments };
+}
+
+function restoreCodeSegments(source, segments) {
+  return segments.reduce(
+    (text, segment, index) => text.replaceAll(`@@GWB_CODE_${index}@@`, segment),
+    source
+  );
+}
+
+function findMathEnd(source, delimiter, start) {
+  for (let index = start; index < source.length; index += 1) {
+    if (delimiter === "$" && source[index] === "\n") {
+      return -1;
+    }
+
+    if (source.startsWith(delimiter, index) && !isEscaped(source, index)) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function renderMath(tex, displayMode) {
+  const source = tex.trim();
+
+  if (!source) {
+    return displayMode ? "$$$$" : "$$";
+  }
+
+  try {
+    const html = katex.renderToString(source, {
+      displayMode,
+      throwOnError: false,
+      strict: "ignore",
+      trust: false
+    });
+
+    return displayMode
+      ? `<div class="math-display">${html}</div>`
+      : `<span class="math-inline">${html}</span>`;
+  } catch {
+    const delimiter = displayMode ? "$$" : "$";
+    return `<code>${escapeHtml(`${delimiter}${source}${delimiter}`)}</code>`;
+  }
+}
+
+function renderMarkdownMath(markdown) {
+  const { text, segments } = protectCodeSegments(markdown);
+  let output = "";
+  let index = 0;
+
+  while (index < text.length) {
+    if (text.startsWith("$$", index) && !isEscaped(text, index)) {
+      const end = findMathEnd(text, "$$", index + 2);
+      if (end !== -1) {
+        output += `\n\n${renderMath(text.slice(index + 2, end), true)}\n\n`;
+        index = end + 2;
+        continue;
+      }
+    }
+
+    if (text[index] === "$" && !isEscaped(text, index)) {
+      const next = text[index + 1] || "";
+      const end = /\s/.test(next) ? -1 : findMathEnd(text, "$", index + 1);
+      const previous = end > index ? text[end - 1] || "" : "";
+
+      if (end !== -1 && !/\s/.test(previous)) {
+        output += renderMath(text.slice(index + 1, end), false);
+        index = end + 1;
+        continue;
+      }
+    }
+
+    output += text[index];
+    index += 1;
+  }
+
+  return restoreCodeSegments(output, segments);
+}
+
 function markdownToHtml(markdown) {
   const source = normalizeMarkdown(markdown);
   if (!source) {
     return "<p></p>";
   }
 
-  return cleanHtml(marked.parse(source));
+  return cleanHtml(marked.parse(renderMarkdownMath(source)));
 }
 
 function htmlToMarkdown(html) {
@@ -520,6 +702,16 @@ createServer(async (request, response) => {
 
     if (request.method === "GET" && (url.pathname === "/favicon.svg" || url.pathname === "/favicon.ico")) {
       await sendFavicon(response);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/katex/katex.min.css") {
+      await sendKatexCss(response);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname.startsWith("/katex/fonts/")) {
+      await sendKatexFont(response, decodeURIComponent(url.pathname.slice("/katex/fonts/".length)));
       return;
     }
 

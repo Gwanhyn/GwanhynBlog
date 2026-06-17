@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/katex/katex.min.css" />
     <title>Gwanhyn Blog 后台</title>
     <style>
       :root {
@@ -579,6 +580,17 @@
       .markdown-preview pre code {
         padding: 0;
         background: transparent;
+      }
+
+      .markdown-preview .math-display {
+        max-width: 100%;
+        overflow-x: auto;
+        margin: 18px 0;
+        padding: 4px 0;
+      }
+
+      .markdown-preview .katex-display {
+        margin: 0;
       }
 
       .publish-dock {

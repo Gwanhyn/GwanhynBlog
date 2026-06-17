@@ -709,6 +709,17 @@ a {
   background: var(--surface-muted);
 }
 
+.article-body .math-display {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 22px 0;
+  padding: 6px 0;
+}
+
+.article-body .katex-display {
+  margin: 0;
+}
+
 .timeline,
 .category-grid,
 .focus-list {

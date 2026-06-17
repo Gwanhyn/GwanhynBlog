@@ -8,6 +8,7 @@ export type Post = {
   tags: string[];
   excerpt: string;
   body: string;
+  markdown?: string;
   minutes: number;
   accent: "teal" | "orange" | "gold" | "ink";
 };

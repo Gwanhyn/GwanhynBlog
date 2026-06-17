@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { focusItems, posts, profile, type Post } from "./content";
+import { renderMarkdown } from "./markdown";
 
 type Theme = "light" | "dark";
 type View = "home" | "archives" | "categories" | "about" | "post";
@@ -493,6 +494,11 @@ function AboutView() {
 }
 
 function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
+  const article = useMemo(
+    () => renderMarkdown(post.markdown || post.body || post.excerpt),
+    [post]
+  );
+
   return (
     <>
       <div className="article-page-heading">
@@ -523,7 +529,7 @@ function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
         </div>
         <div
           className="article-body"
-          dangerouslySetInnerHTML={{ __html: post.body || `<p>${post.excerpt}</p>` }}
+          dangerouslySetInnerHTML={{ __html: article.html }}
         />
       </article>
     </>
