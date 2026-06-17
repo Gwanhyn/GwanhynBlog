@@ -269,6 +269,11 @@ a {
   backdrop-filter: blur(12px);
 }
 
+.post-main {
+  height: 100vh;
+  overflow: hidden;
+}
+
 .page-shell {
   display: grid;
   width: min(1160px, calc(100% - 32px));
@@ -278,11 +283,47 @@ a {
   align-items: start;
 }
 
+.reading-shell {
+  width: min(1440px, calc(100% - 24px));
+  height: calc(100vh - 108px);
+  min-height: 0;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 96px;
+}
+
 .sidebar {
   position: sticky;
   top: 94px;
   display: grid;
   gap: 16px;
+}
+
+.reading-shell .sidebar {
+  justify-items: center;
+}
+
+.reading-shell .profile-panel {
+  display: grid;
+  width: 72px;
+  justify-items: center;
+  padding: 10px;
+}
+
+.reading-shell .avatar {
+  width: 46px;
+  height: 46px;
+  margin: 0;
+  border-radius: 10px;
+  font-size: 1.2rem;
+}
+
+.reading-shell .profile-panel h2,
+.reading-shell .profile-panel p,
+.reading-shell .profile-meta,
+.reading-shell .profile-links,
+.reading-shell .side-panel {
+  display: none;
 }
 
 .profile-panel,
@@ -600,8 +641,17 @@ a {
   font-weight: 750;
 }
 
+.article-screen {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
 .article-page-heading {
-  margin-bottom: 14px;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 12px;
 }
 
 .back-button {
@@ -618,27 +668,48 @@ a {
   font-weight: 750;
 }
 
+.article-layout {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 18px;
+}
+
+.article-main-scroll,
+.article-toc {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.article-main-scroll {
+  padding-right: 4px;
+}
+
 .article-page {
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: clamp(24px, 4vw, 44px);
+  min-height: 100%;
+  padding: clamp(28px, 5vw, 58px);
   background: var(--surface);
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
 }
 
 .article-page h2 {
-  max-width: 780px;
+  max-width: 920px;
   margin: 14px 0 0;
   color: var(--text-strong);
-  font-size: clamp(2rem, 5vw, 3.15rem);
+  font-size: clamp(2.25rem, 4.8vw, 3.8rem);
   line-height: 1.08;
 }
 
 .article-body {
-  max-width: 820px;
-  margin-top: 28px;
+  max-width: 900px;
+  margin-top: 34px;
   color: var(--text);
+  font-size: 1.04rem;
   line-height: 1.9;
 }
 
@@ -718,6 +789,77 @@ a {
 
 .article-body .katex-display {
   margin: 0;
+}
+
+.article-toc {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--surface);
+  box-shadow: var(--flat-shadow);
+  backdrop-filter: blur(18px);
+}
+
+.toc-heading {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 2px 0 12px;
+  color: var(--text-strong);
+  background: linear-gradient(180deg, var(--surface-solid), rgba(255, 255, 255, 0));
+  font-size: 0.92rem;
+  font-weight: 850;
+}
+
+[data-theme="dark"] .toc-heading {
+  background: linear-gradient(180deg, var(--surface-solid), rgba(39, 43, 45, 0));
+}
+
+.toc-list {
+  display: grid;
+  gap: 5px;
+}
+
+.toc-item {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 9px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 680;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.toc-item:hover {
+  color: var(--text-strong);
+  background: var(--surface-muted);
+}
+
+.toc-item.depth-1 {
+  padding-left: 8px;
+  color: var(--text-strong);
+}
+
+.toc-item.depth-2 {
+  padding-left: 18px;
+}
+
+.toc-item.depth-3 {
+  padding-left: 28px;
+}
+
+.toc-item.depth-4 {
+  padding-left: 38px;
+}
+
+.toc-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .timeline,
@@ -856,6 +998,42 @@ a {
 
   .page-shell {
     grid-template-columns: 1fr;
+  }
+
+  .reading-shell {
+    width: min(100% - 24px, 840px);
+    height: auto;
+    min-height: 0;
+    margin-top: 86px;
+  }
+
+  .post-main {
+    height: auto;
+    overflow: visible;
+  }
+
+  .reading-shell .sidebar {
+    display: none;
+  }
+
+  .article-screen {
+    min-height: 0;
+  }
+
+  .article-layout {
+    height: auto;
+    min-height: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .article-main-scroll {
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .article-toc {
+    max-height: 220px;
+    overflow-y: auto;
   }
 
   .sidebar {

@@ -14,9 +14,9 @@ import {
   Tag,
   UserRound
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { focusItems, posts, profile, type Post } from "./content";
-import { renderMarkdown } from "./markdown";
+import { renderMarkdown, type TocHeading } from "./markdown";
 
 type Theme = "light" | "dark";
 type View = "home" | "archives" | "categories" | "about" | "post";
@@ -180,27 +180,29 @@ function App() {
         </button>
       </header>
 
-      <main>
-        <section className="hero">
-          <div className="hero-overlay" />
-          <div className="hero-content">
-            <p className="eyebrow">Personal notes and engineering logs</p>
-            <h1>Gwanhyn Blog</h1>
-            <p className="hero-subtitle">Never give up. Keep shipping, keep learning.</p>
-            <div className="hero-actions" aria-label="Hero links">
-              <button className="hero-button" type="button" onClick={() => changeView("home")}>
-                <BookOpen size={18} />
-                <span>Read Notes</span>
-              </button>
-              <a className="hero-button subtle" href={profile.github}>
-                <GitBranch size={18} />
-                <span>GitHub</span>
-              </a>
+      <main className={view === "post" ? "post-main" : undefined}>
+        {view !== "post" && (
+          <section className="hero">
+            <div className="hero-overlay" />
+            <div className="hero-content">
+              <p className="eyebrow">Personal notes and engineering logs</p>
+              <h1>Gwanhyn Blog</h1>
+              <p className="hero-subtitle">Never give up. Keep shipping, keep learning.</p>
+              <div className="hero-actions" aria-label="Hero links">
+                <button className="hero-button" type="button" onClick={() => changeView("home")}>
+                  <BookOpen size={18} />
+                  <span>Read Notes</span>
+                </button>
+                <a className="hero-button subtle" href={profile.github}>
+                  <GitBranch size={18} />
+                  <span>GitHub</span>
+                </a>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
-        <div className="page-shell">
+        <div className={view === "post" ? "page-shell reading-shell" : "page-shell"}>
           <aside className="sidebar" aria-label="Author profile">
             <section className="profile-panel">
               <div className="avatar" aria-hidden="true">
@@ -278,10 +280,12 @@ function App() {
         </div>
       </main>
 
+      {view !== "post" && (
       <footer className="footer">
         <span>© {new Date().getFullYear()} {profile.name}</span>
         <span>Built with React and Vite</span>
       </footer>
+      )}
 
     </>
   );
@@ -494,46 +498,116 @@ function AboutView() {
 }
 
 function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
-  const article = useMemo(
-    () => renderMarkdown(post.markdown || post.body || post.excerpt),
+  const articleScrollRef = useRef<HTMLDivElement | null>(null);
+  const markdown = useMemo(
+    () => removeDuplicateTitleHeading(post.markdown || post.body || post.excerpt, post.title),
     [post]
   );
+  const article = useMemo(
+    () => renderMarkdown(markdown),
+    [markdown]
+  );
+  const tocHeadings = useMemo(
+    () => article.headings.filter((heading) => heading.depth >= 1 && heading.depth <= 4),
+    [article.headings]
+  );
+
+  const scrollToHeading = (heading: TocHeading) => {
+    const scrollArea = articleScrollRef.current;
+    const target = Array.from(scrollArea?.querySelectorAll<HTMLElement>("[id]") || [])
+      .find((element) => element.id === heading.id);
+
+    if (!scrollArea || !target) {
+      return;
+    }
+
+    const offset =
+      target.getBoundingClientRect().top -
+      scrollArea.getBoundingClientRect().top +
+      scrollArea.scrollTop -
+      18;
+    scrollArea.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
+  };
 
   return (
-    <>
+    <section className="article-screen">
       <div className="article-page-heading">
         <button className="back-button" type="button" onClick={onBack}>
           <ArrowLeft size={17} />
           <span>Back</span>
         </button>
       </div>
-      <article className="article-page">
-        <div className="post-meta">
-          <span>
-            <CalendarDays size={15} />
-            {formatDate(post.date)}
-          </span>
-          <span>
-            <FolderOpen size={15} />
-            {post.category}
-          </span>
+      <div className="article-layout">
+        <div className="article-main-scroll" ref={articleScrollRef}>
+          <article className="article-page">
+            <div className="post-meta">
+              <span>
+                <CalendarDays size={15} />
+                {formatDate(post.date)}
+              </span>
+              <span>
+                <FolderOpen size={15} />
+                {post.category}
+              </span>
+            </div>
+            <h2 id="article-title">{post.title}</h2>
+            <div className="tag-row">
+              {post.tags.map((tag) => (
+                <span key={tag}>
+                  <Tag size={13} />
+                  {tag}
+                </span>
+              ))}
+            </div>
+            <div
+              className="article-body"
+              dangerouslySetInnerHTML={{ __html: article.html }}
+            />
+          </article>
         </div>
-        <h2 id="article-title">{post.title}</h2>
-        <div className="tag-row">
-          {post.tags.map((tag) => (
-            <span key={tag}>
-              <Tag size={13} />
-              {tag}
-            </span>
-          ))}
-        </div>
-        <div
-          className="article-body"
-          dangerouslySetInnerHTML={{ __html: article.html }}
-        />
-      </article>
-    </>
+
+        <aside className="article-toc" aria-label="文章目录">
+          <div className="toc-heading">目录</div>
+          <div className="toc-list">
+            {tocHeadings.length ? (
+              tocHeadings.map((heading) => (
+                <button
+                  className={`toc-item depth-${heading.depth}`}
+                  key={heading.id}
+                  type="button"
+                  onClick={() => scrollToHeading(heading)}
+                >
+                  {heading.text}
+                </button>
+              ))
+            ) : (
+              <p className="toc-empty">暂无标题</p>
+            )}
+          </div>
+        </aside>
+      </div>
+    </section>
   );
+}
+
+function removeDuplicateTitleHeading(markdown: string, title: string) {
+  const lines = String(markdown || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const firstContentIndex = lines.findIndex((line) => line.trim());
+
+  if (firstContentIndex === -1) {
+    return markdown;
+  }
+
+  const match = lines[firstContentIndex].match(/^#\s+(.+?)\s*#*\s*$/);
+  const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
+
+  if (match && normalize(match[1]) === normalize(title)) {
+    return [...lines.slice(0, firstContentIndex), ...lines.slice(firstContentIndex + 1)]
+      .join("\n")
+      .trim();
+  }
+
+  return markdown;
 }
 
 export default App;
