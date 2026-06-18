@@ -281,10 +281,10 @@ function App() {
       </main>
 
       {view !== "post" && (
-      <footer className="footer">
-        <span>© {new Date().getFullYear()} {profile.name}</span>
-        <span>Built with React and Vite</span>
-      </footer>
+        <footer className="footer">
+          <span>© {new Date().getFullYear()} {profile.name}</span>
+          <span>Built with React and Vite</span>
+        </footer>
       )}
 
     </>
@@ -527,9 +527,11 @@ function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
         return;
       }
 
-      const anchorLine = 128;
-      const current = headings.reduce((active, heading) => {
-        return heading.getBoundingClientRect().top <= anchorLine ? heading : active;
+      const anchorLine = 112;
+      const current = headings.reduce((closest, heading) => {
+        const closestDistance = Math.abs(closest.getBoundingClientRect().top - anchorLine);
+        const headingDistance = Math.abs(heading.getBoundingClientRect().top - anchorLine);
+        return headingDistance < closestDistance ? heading : closest;
       }, headings[0]);
       setActiveHeadingId(current.id);
     };
@@ -602,6 +604,7 @@ function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
                   className={`toc-item depth-${heading.depth}${activeHeadingId === heading.id ? " active" : ""}`}
                   key={heading.id}
                   type="button"
+                  data-heading-id={heading.id}
                   aria-current={activeHeadingId === heading.id ? "true" : undefined}
                   onClick={() => scrollToHeading(heading)}
                 >
