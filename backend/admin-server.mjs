@@ -15,6 +15,9 @@ const KATEX_CSS_FILE = path.join(ROOT, "node_modules", "katex", "dist", "katex.m
 const KATEX_FONT_DIR = path.join(ROOT, "node_modules", "katex", "dist", "fonts");
 const PORT = Number(process.env.ADMIN_PORT || 8787);
 const ACCENTS = new Set(["teal", "orange", "gold", "ink"]);
+const MAX_PREVIEW_CHARS = 60_000;
+const MAX_PREVIEW_MATH = 64;
+const MAX_SAVE_MATH = 240;
 const FONT_CONTENT_TYPES = new Map([
   [".woff2", "font/woff2"],
   [".woff", "font/woff"],
@@ -255,15 +258,28 @@ function renderMath(tex, displayMode) {
   }
 }
 
-function renderMarkdownMath(markdown) {
+function renderMarkdownMath(markdown, options = {}) {
   const { text, segments } = protectCodeSegments(markdown);
   let output = "";
   let index = 0;
+  let mathCount = 0;
+  const maxMath = Number.isFinite(Number(options.maxMath))
+    ? Math.max(0, Number(options.maxMath))
+    : Infinity;
+
+  const canRenderMath = () => {
+    if (mathCount >= maxMath) {
+      return false;
+    }
+
+    mathCount += 1;
+    return true;
+  };
 
   while (index < text.length) {
     if (text.startsWith("$$", index) && !isEscaped(text, index)) {
       const end = findMathEnd(text, "$$", index + 2);
-      if (end !== -1) {
+      if (end !== -1 && canRenderMath()) {
         output += `\n\n${renderMath(text.slice(index + 2, end), true)}\n\n`;
         index = end + 2;
         continue;
@@ -275,7 +291,7 @@ function renderMarkdownMath(markdown) {
       const end = /\s/.test(next) ? -1 : findMathEnd(text, "$", index + 1);
       const previous = end > index ? text[end - 1] || "" : "";
 
-      if (end !== -1 && !/\s/.test(previous)) {
+      if (end !== -1 && !/\s/.test(previous) && canRenderMath()) {
         output += renderMath(text.slice(index + 1, end), false);
         index = end + 1;
         continue;
@@ -289,13 +305,38 @@ function renderMarkdownMath(markdown) {
   return restoreCodeSegments(output, segments);
 }
 
-function markdownToHtml(markdown) {
+function renderMarkdownToHtml(markdown, options = {}) {
   const source = normalizeMarkdown(markdown);
   if (!source) {
-    return "<p></p>";
+    return { html: "<p></p>", text: "", truncated: false };
   }
 
-  return cleanHtml(marked.parse(renderMarkdownMath(source)));
+  const preview = Boolean(options.preview);
+  const maxChars = preview ? Number(options.maxChars || MAX_PREVIEW_CHARS) : 0;
+  const truncated = maxChars > 0 && source.length > maxChars;
+  const renderSource = truncated
+    ? `${source.slice(0, maxChars)}\n\n> 预览内容较长，已截断显示；保存时仍会处理完整正文。`
+    : source;
+  const maxMath = Number.isFinite(Number(options.maxMath))
+    ? Number(options.maxMath)
+    : (preview ? MAX_PREVIEW_MATH : MAX_SAVE_MATH);
+
+  try {
+    const html = cleanHtml(marked.parse(renderMarkdownMath(renderSource, { maxMath })));
+    return { html, text: stripHtml(html), truncated };
+  } catch (error) {
+    const fallback = cleanHtml(marked.parse(escapeHtml(renderSource)));
+    return {
+      html: fallback,
+      text: stripHtml(fallback),
+      truncated,
+      warning: error.message || "Markdown 渲染失败，已使用安全文本预览。"
+    };
+  }
+}
+
+function markdownToHtml(markdown, options = {}) {
+  return renderMarkdownToHtml(markdown, options).html;
 }
 
 function htmlToMarkdown(html) {
@@ -357,7 +398,7 @@ function normalizePost(input) {
   const markdown = normalizeMarkdown(input.markdown ?? input.bodyMarkdown ?? htmlToMarkdown(input.body));
   const body = markdownToHtml(markdown);
   const plainBody = stripHtml(body);
-  const excerpt = String(input.excerpt || plainBody.slice(0, 140)).trim();
+  const excerpt = String(input.excerpt || "").trim();
   const date = /^\d{4}-\d{2}-\d{2}$/.test(String(input.date || ""))
     ? String(input.date)
     : new Date().toISOString().slice(0, 10);
@@ -487,6 +528,10 @@ async function gitStatus() {
     ahead = Number.isFinite(aheadCount) ? aheadCount : 0;
   }
 
+  const entries = status.stdout ? status.stdout.split("\n") : [];
+  const stagedEntries = entries.filter((entry) => entry[0] && entry[0] !== " " && entry[0] !== "?");
+  const unstagedEntries = entries.filter((entry) => entry.startsWith("??") || (entry[1] && entry[1] !== " "));
+
   return {
     branch: branch.stdout || "master",
     upstream,
@@ -494,7 +539,11 @@ async function gitStatus() {
     behind,
     diverged: ahead > 0 && behind > 0,
     dirty: Boolean(status.stdout),
-    entries: status.stdout ? status.stdout.split("\n") : [],
+    staged: stagedEntries.length > 0,
+    unstaged: unstagedEntries.length > 0,
+    entries,
+    stagedEntries,
+    unstagedEntries,
     historyRewritten
   };
 }
@@ -522,9 +571,19 @@ async function ensureCleanWorkingTree() {
   }
 }
 
+async function stageChanges() {
+  const stage = await runGit(["add", "-A"]);
+  return { stage, status: await gitStatus(), history: await gitHistory() };
+}
+
+async function unstageChanges() {
+  const unstage = await runGit(["restore", "--staged", "."]);
+  return { unstage, status: await gitStatus(), history: await gitHistory() };
+}
+
 async function amendLastCommit(message) {
   const commitMessage = String(message || "").trim();
-  const add = await runGit(["add", "-A"]);
+  const staged = await runGit(["diff", "--cached", "--name-only"]);
   const args = ["commit", "--amend"];
 
   if (commitMessage) {
@@ -535,7 +594,7 @@ async function amendLastCommit(message) {
 
   const commit = await runGit(args);
   historyRewritten = true;
-  return { add, commit, status: await gitStatus() };
+  return { staged, commit, status: await gitStatus() };
 }
 
 async function resolveSquashCount(payload) {
@@ -550,7 +609,7 @@ async function resolveSquashCount(payload) {
   return Number(payload.count || 0);
 }
 
-async function squashCommits(payload) {
+async function validateSquashInput(payload) {
   const commitMessage = String(payload.message || "").trim();
   const count = await resolveSquashCount(payload);
 
@@ -573,6 +632,45 @@ async function squashCommits(payload) {
     throw error;
   }
 
+  return { commitMessage, count };
+}
+
+async function previewSquash(payload) {
+  const { commitMessage, count } = await validateSquashInput(payload);
+  await ensureCleanWorkingTree();
+
+  const [head, base, history] = await Promise.all([
+    runGit(["rev-parse", "HEAD"]),
+    runGit(["rev-parse", `HEAD~${count}`]),
+    runGit([
+      "log",
+      `--max-count=${count}`,
+      "--date=relative",
+      "--pretty=format:%H%x1f%h%x1f%s%x1f%cr%x1f%an%x1e"
+    ])
+  ]);
+
+  return {
+    count,
+    message: commitMessage,
+    head: head.stdout,
+    base: base.stdout,
+    commits: parseGitHistory(history.stdout),
+    result: {
+      parent: base.stdout.slice(0, 7),
+      subject: commitMessage
+    }
+  };
+}
+
+async function squashCommits(payload) {
+  if (!payload.confirmed) {
+    const error = new Error("请先预览并确认合并提交。");
+    error.status = 428;
+    throw error;
+  }
+
+  const { commitMessage, count } = await validateSquashInput(payload);
   await ensureCleanWorkingTree();
   const reset = await runGit(["reset", "--soft", `HEAD~${count}`]);
   const commit = await runGit(["commit", "-m", commitMessage]);
@@ -592,23 +690,21 @@ async function pushToRemote(force = false) {
 }
 
 async function commitChanges(message) {
-  const commitMessage = String(message || "Update blog content").trim();
-  const add = await runGit(["add", "-A"]);
-  const status = await runGit(["status", "--porcelain"]);
+  const commitMessage = String(message || "").trim() || "Update blog content";
+  const staged = await runGit(["diff", "--cached", "--name-only"]);
   let commit = {
     command: `git commit -m "${commitMessage}"`,
     stdout: "",
-    stderr: "没有需要提交的本地改动。",
+    stderr: "暂存区为空。请先 Stage，再 Commit。",
     skipped: true
   };
 
-  if (status.stdout) {
+  if (staged.stdout) {
     commit = await runGit(["commit", "-m", commitMessage]);
   }
 
   return {
-    add,
-    status,
+    staged,
     commit,
     gitStatus: await gitStatus()
   };
@@ -643,8 +739,11 @@ async function routeApi(request, response, url) {
 
   if (request.method === "POST" && url.pathname === "/api/markdown/preview") {
     const payload = JSON.parse(await readRequestBody(request) || "{}");
-    const html = markdownToHtml(payload.markdown || "");
-    sendJson(response, 200, { html, text: stripHtml(html) });
+    sendJson(response, 200, renderMarkdownToHtml(payload.markdown || "", {
+      preview: true,
+      maxChars: MAX_PREVIEW_CHARS,
+      maxMath: MAX_PREVIEW_MATH
+    }));
     return;
   }
 
@@ -657,6 +756,16 @@ async function routeApi(request, response, url) {
   if (request.method === "POST" && (url.pathname === "/api/git/commit" || url.pathname === "/api/publish")) {
     const payload = JSON.parse(await readRequestBody(request) || "{}");
     sendJson(response, 200, await commitChanges(payload.message));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/git/stage") {
+    sendJson(response, 200, await stageChanges());
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/git/unstage") {
+    sendJson(response, 200, await unstageChanges());
     return;
   }
 
@@ -679,6 +788,12 @@ async function routeApi(request, response, url) {
   if (request.method === "POST" && url.pathname === "/api/git/squash") {
     const payload = JSON.parse(await readRequestBody(request) || "{}");
     sendJson(response, 200, await squashCommits(payload));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/git/squash/preview") {
+    const payload = JSON.parse(await readRequestBody(request) || "{}");
+    sendJson(response, 200, await previewSquash(payload));
     return;
   }
 
