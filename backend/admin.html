@@ -135,7 +135,7 @@
         min-height: 78px;
         align-content: space-between;
         gap: 8px;
-        overflow: hidden;
+        overflow: visible;
         padding: 12px;
         text-align: left;
       }
@@ -198,6 +198,30 @@
         background: #50808e;
       }
 
+      .button.save-action {
+        color: #234a27;
+        border-color: rgba(79, 125, 82, 0.28);
+        background: rgba(79, 125, 82, 0.14);
+      }
+
+      .button.stage-action {
+        color: #254769;
+        border-color: rgba(74, 112, 166, 0.28);
+        background: rgba(74, 112, 166, 0.14);
+      }
+
+      .button.commit-action {
+        color: #ffffff;
+        border-color: transparent;
+        background: #50808e;
+      }
+
+      .button.unstage-action {
+        color: #8a4a13;
+        border-color: rgba(210, 138, 50, 0.34);
+        background: rgba(210, 138, 50, 0.16);
+      }
+
       .button.danger {
         color: #a72732;
       }
@@ -214,6 +238,51 @@
       .icon-button:hover {
         border-color: rgba(80, 128, 142, 0.42);
         box-shadow: 0 8px 24px rgba(80, 128, 142, 0.12);
+      }
+
+      .has-tooltip {
+        position: relative;
+      }
+
+      .has-tooltip::after {
+        position: absolute;
+        z-index: 30;
+        bottom: calc(100% + 9px);
+        left: 50%;
+        max-width: 260px;
+        border: 1px solid rgba(23, 33, 36, 0.12);
+        border-radius: 8px;
+        padding: 7px 9px;
+        color: #f8fbfb;
+        content: attr(data-tooltip);
+        background: rgba(18, 27, 30, 0.94);
+        box-shadow: 0 12px 34px rgba(23, 33, 36, 0.22);
+        font-size: 0.74rem;
+        font-weight: 700;
+        line-height: 1.35;
+        opacity: 0;
+        pointer-events: none;
+        text-align: center;
+        transform: translate(-50%, 4px);
+        transition: opacity 140ms ease, transform 140ms ease;
+        white-space: normal;
+      }
+
+      .has-tooltip:hover::after,
+      .has-tooltip:focus-visible::after {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+
+      .task-button.has-tooltip::after {
+        left: 12px;
+        text-align: left;
+        transform: translate(0, 4px);
+      }
+
+      .task-button.has-tooltip:hover::after,
+      .task-button.has-tooltip:focus-visible::after {
+        transform: translate(0, 0);
       }
 
       .icon-button svg {
@@ -492,6 +561,22 @@
         font-size: 0.78rem;
       }
 
+      .preview-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .preview-status.warning {
+        color: #955417;
+      }
+
+      .preview-button {
+        min-height: 30px;
+        padding: 0 9px;
+        font-size: 0.76rem;
+      }
+
       .markdown-input {
         min-height: 0;
         flex: 1;
@@ -597,7 +682,7 @@
         position: sticky;
         bottom: -14px;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto auto;
+        grid-template-columns: minmax(0, 1fr) repeat(4, auto);
         gap: 10px;
         margin: 0 -14px -14px;
         padding: 12px 14px;
@@ -757,6 +842,105 @@
         }
       }
 
+      .modal-backdrop {
+        position: fixed;
+        z-index: 20;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: rgba(18, 27, 30, 0.44);
+        backdrop-filter: blur(10px);
+      }
+
+      .modal-dialog {
+        display: flex;
+        width: min(680px, 100%);
+        max-height: min(760px, calc(100vh - 48px));
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid rgba(23, 33, 36, 0.14);
+        border-radius: 8px;
+        background: rgba(248, 251, 250, 0.98);
+        box-shadow: 0 28px 80px rgba(18, 27, 30, 0.28);
+      }
+
+      .modal-head,
+      .modal-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+      }
+
+      .modal-head {
+        border-bottom: 1px solid rgba(23, 33, 36, 0.1);
+      }
+
+      .modal-head h2 {
+        color: #121b1e;
+        font-size: 1.05rem;
+      }
+
+      .modal-head p {
+        margin-top: 3px;
+        color: #687779;
+        font-size: 0.8rem;
+      }
+
+      .modal-body {
+        min-height: 0;
+        overflow: auto;
+        padding: 14px 16px;
+      }
+
+      .modal-actions {
+        justify-content: flex-end;
+        border-top: 1px solid rgba(23, 33, 36, 0.1);
+      }
+
+      .squash-result {
+        border: 1px solid rgba(80, 128, 142, 0.18);
+        border-radius: 8px;
+        padding: 12px;
+        background: rgba(80, 128, 142, 0.08);
+      }
+
+      .squash-result small,
+      .squash-preview-card span {
+        display: block;
+        color: #687779;
+        font-size: 0.78rem;
+      }
+
+      .squash-result strong {
+        display: block;
+        margin-top: 6px;
+        color: #172124;
+        overflow-wrap: anywhere;
+      }
+
+      .squash-preview-list {
+        display: grid;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .squash-preview-card {
+        border: 1px solid rgba(23, 33, 36, 0.1);
+        border-radius: 8px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.64);
+      }
+
+      .squash-preview-card strong {
+        display: block;
+        margin-bottom: 5px;
+        color: #172124;
+        overflow-wrap: anywhere;
+      }
+
       .toast {
         position: fixed;
         z-index: 10;
@@ -809,10 +993,10 @@
         </header>
 
         <div class="task-group">
-          <button class="task-button new" id="newButton" type="button"><span>+</span><strong>New</strong><small>新建文章</small></button>
-          <button class="task-button save" id="saveTaskButton" type="button"><span>S</span><strong>Save</strong><small>保存草稿</small></button>
-          <button class="task-button delete" id="deleteButton" type="button"><span>D</span><strong>Delete</strong><small>删除文章</small></button>
-          <button class="task-button refresh" id="refreshButton" type="button"><span>R</span><strong>Refresh</strong><small>刷新文章</small></button>
+          <button class="task-button new has-tooltip" id="newButton" type="button" data-tooltip="清空编辑区，开始写一篇新文章。"><span>+</span><strong>New</strong><small>新建文章</small></button>
+          <button class="task-button save has-tooltip" id="saveTaskButton" type="button" data-tooltip="只保存当前文章到 src/data/posts.json，不执行 Git 操作。"><span>S</span><strong>Save</strong><small>保存草稿</small></button>
+          <button class="task-button delete has-tooltip" id="deleteButton" type="button" data-tooltip="删除当前选中的文章，删除后仍需手动 Stage 和 Commit。"><span>D</span><strong>Delete</strong><small>删除文章</small></button>
+          <button class="task-button refresh has-tooltip" id="refreshButton" type="button" data-tooltip="重新读取文章数据与 Git 状态。"><span>R</span><strong>Refresh</strong><small>刷新文章</small></button>
         </div>
 
         <div class="rail-meta">
@@ -841,8 +1025,10 @@
               <p id="editorStateText">等待载入</p>
             </div>
             <div class="head-actions">
-              <button class="button" id="saveHeadButton" type="submit">Save</button>
-              <button class="button primary" id="commitHeadButton" type="button">Save & Commit</button>
+              <button class="button save-action has-tooltip" id="saveHeadButton" type="submit" data-tooltip="保存当前文章，不暂存、不提交。">Save</button>
+              <button class="button stage-action has-tooltip" id="stageHeadButton" type="button" data-tooltip="执行 git add -A，暂存当前工作区改动。">Stage</button>
+              <button class="button commit-action has-tooltip" id="commitHeadButton" type="button" data-tooltip="只提交暂存区内容；请先 Stage。">Commit</button>
+              <button class="button unstage-action has-tooltip" id="unstageHeadButton" type="button" data-tooltip="清空暂存区，保留工作区文件内容。">Unstage</button>
             </div>
           </div>
 
@@ -892,7 +1078,7 @@
           <div class="excerpt-grid">
             <label class="field">
               <span>摘要</span>
-              <textarea id="excerptInput" placeholder="留空时会从正文自动截取"></textarea>
+              <textarea id="excerptInput" placeholder="默认留空；需要卡片摘要时可手动填写"></textarea>
             </label>
             <label class="file-drop" for="fileInput">
               <span>文件导入</span>
@@ -914,7 +1100,10 @@
             <section class="work-panel">
               <header class="work-panel-header">
                 <h3>内容预览</h3>
-                <span>按 Markdown 渲染</span>
+                <div class="preview-actions">
+                  <span class="preview-status" id="previewStatus">按 Markdown 渲染</span>
+                  <button class="button preview-button has-tooltip" id="previewRefreshButton" type="button" data-tooltip="强制刷新当前 Markdown 预览。">Refresh</button>
+                </div>
               </header>
               <div class="markdown-preview" id="markdownPreview"></div>
             </section>
@@ -922,8 +1111,10 @@
 
           <div class="publish-dock">
             <input id="dockCommitInput" value="Update blog content" aria-label="提交信息" />
-            <button class="button" id="saveDockButton" type="submit">Save</button>
-            <button class="button primary" id="commitButton" type="button">Save & Commit</button>
+            <button class="button save-action has-tooltip" id="saveDockButton" type="submit" data-tooltip="保存当前文章，不暂存、不提交。">Save</button>
+            <button class="button stage-action has-tooltip" id="stageButton" type="button" data-tooltip="执行 git add -A，暂存当前工作区改动。">Stage</button>
+            <button class="button commit-action has-tooltip" id="commitButton" type="button" data-tooltip="只提交暂存区内容；请先 Stage。">Commit</button>
+            <button class="button unstage-action has-tooltip" id="unstageButton" type="button" data-tooltip="清空暂存区，保留工作区文件内容。">Unstage</button>
           </div>
         </form>
       </section>
@@ -934,7 +1125,7 @@
             <h2>Git 历史</h2>
             <p id="gitStatusText">加载中</p>
           </div>
-          <button class="icon-button" id="historyRefreshButton" type="button" title="刷新历史" aria-label="刷新 Git 历史">
+          <button class="icon-button has-tooltip" id="historyRefreshButton" type="button" title="刷新历史" aria-label="刷新 Git 历史" data-tooltip="只刷新右侧 Git 历史与状态。">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M21 12a9 9 0 0 1-15.5 6.2" />
               <path d="M3 12A9 9 0 0 1 18.5 5.8" />
@@ -952,20 +1143,35 @@
         <div class="git-tools">
           <div class="tool-row">
             <input id="amendMessageInput" placeholder="修正提交信息，可留空" />
-            <button class="button" id="amendButton" type="button">Amend</button>
+            <button class="button has-tooltip" id="amendButton" type="button" data-tooltip="修正最新提交；不会自动 Stage。">Amend</button>
           </div>
           <div class="tool-row compact">
             <input id="squashCountInput" type="number" min="2" value="2" aria-label="合并数量" />
             <input id="squashMessageInput" placeholder="新的合并提交信息" />
-            <button class="button" id="squashButton" type="button">Squash</button>
+            <button class="button has-tooltip" id="squashButton" type="button" data-tooltip="先预览要合并的提交，确认后再改写历史。">Squash</button>
           </div>
-          <button class="button primary" id="gitPushButton" type="button">Push</button>
+          <button class="button primary has-tooltip" id="gitPushButton" type="button" data-tooltip="把本地 master 推送到 origin；如历史被改写会使用 force-with-lease。">Push</button>
         </div>
 
         <div class="timeline" id="gitTimeline"></div>
       </aside>
     </main>
     <div class="toast hidden" id="toast"></div>
+    <div class="modal-backdrop hidden" id="squashModal" role="dialog" aria-modal="true" aria-labelledby="squashModalTitle">
+      <section class="modal-dialog">
+        <header class="modal-head">
+          <div>
+            <h2 id="squashModalTitle">确认 Squash</h2>
+            <p>请检查将被改写的提交和新的提交结果。</p>
+          </div>
+        </header>
+        <div class="modal-body" id="squashPreviewContent"></div>
+        <footer class="modal-actions">
+          <button class="button has-tooltip" id="squashCancelButton" type="button" data-tooltip="取消这次合并，不修改 Git 历史。">Cancel</button>
+          <button class="button commit-action has-tooltip" id="squashConfirmButton" type="button" data-tooltip="确认后会执行 reset --soft 并生成新的合并提交。">Confirm Squash</button>
+        </footer>
+      </section>
+    </div>
 
     <script>
       const state = {
@@ -974,8 +1180,13 @@
         gitHistory: [],
         gitStatus: null,
         previewToken: 0,
-        previewTimer: 0
+        previewTimer: 0,
+        previewAbort: null,
+        pendingSquash: null
       };
+
+      const AUTO_PREVIEW_LIMIT = 60_000;
+      const PREVIEW_DEBOUNCE_MS = 720;
 
       const fields = {
         title: document.querySelector("#titleInput"),
@@ -993,6 +1204,12 @@
         squashCount: document.querySelector("#squashCountInput"),
         squashMessage: document.querySelector("#squashMessageInput")
       };
+
+      document.querySelectorAll("[data-tooltip]").forEach((element) => {
+        if (!element.title) {
+          element.title = element.dataset.tooltip;
+        }
+      });
 
       function showToast(message) {
         const toast = document.querySelector("#toast");
@@ -1135,21 +1352,59 @@
         document.querySelector("#wordCountLabel").textContent = count + " 字";
       }
 
-      async function renderPreviewNow() {
+      function setPreviewStatus(message, warning = false) {
+        const status = document.querySelector("#previewStatus");
+        status.textContent = message;
+        status.classList.toggle("warning", warning);
+      }
+
+      function cancelPreviewRequest() {
+        if (state.previewAbort) {
+          state.previewAbort.abort();
+          state.previewAbort = null;
+        }
+      }
+
+      async function renderPreviewNow(options = {}) {
+        const force = Boolean(options.force);
+        const markdown = fields.markdown.value;
         const token = ++state.previewToken;
         const preview = document.querySelector("#markdownPreview");
-        preview.innerHTML = '<div class="empty-state">正在渲染</div>';
+
+        if (!force && markdown.length > AUTO_PREVIEW_LIMIT) {
+          cancelPreviewRequest();
+          setPreviewStatus("长文预览已暂停", true);
+          if (!preview.innerHTML.trim()) {
+            preview.innerHTML = '<div class="empty-state">正文较长，已暂停自动预览。点击 Refresh 强制刷新当前预览。</div>';
+          }
+          return;
+        }
+
+        cancelPreviewRequest();
+        const controller = new AbortController();
+        state.previewAbort = controller;
+        setPreviewStatus("正在渲染", false);
+
         try {
           const data = await api("/api/markdown/preview", {
             method: "POST",
-            body: JSON.stringify({ markdown: fields.markdown.value })
+            signal: controller.signal,
+            body: JSON.stringify({ markdown })
           });
           if (token === state.previewToken) {
             preview.innerHTML = data.html || '<div class="empty-state">暂无内容</div>';
+            setPreviewStatus(data.truncated ? "预览已截断" : "预览已更新", Boolean(data.truncated || data.warning));
+            if (data.warning) showToast(data.warning);
           }
         } catch (error) {
+          if (error.name === "AbortError") return;
           if (token === state.previewToken) {
             preview.innerHTML = '<div class="empty-state">' + escapeHtml(error.message) + "</div>";
+            setPreviewStatus("预览失败", true);
+          }
+        } finally {
+          if (state.previewAbort === controller) {
+            state.previewAbort = null;
           }
         }
       }
@@ -1157,7 +1412,14 @@
       function schedulePreview() {
         renderWordCount();
         window.clearTimeout(state.previewTimer);
-        state.previewTimer = window.setTimeout(renderPreviewNow, 260);
+        if (fields.markdown.value.length > AUTO_PREVIEW_LIMIT) {
+          state.previewToken += 1;
+          cancelPreviewRequest();
+          setPreviewStatus("长文预览已暂停", true);
+          return;
+        }
+
+        state.previewTimer = window.setTimeout(() => renderPreviewNow(), PREVIEW_DEBOUNCE_MS);
       }
 
       function renderGitPanel() {
@@ -1167,17 +1429,22 @@
         const statusText = document.querySelector("#gitStatusText");
         const timeline = document.querySelector("#gitTimeline");
         const dirtyText = status.dirty ? "有未提交改动" : "工作区干净";
+        const stagingText = [
+          status.staged ? "已暂存" : "",
+          status.unstaged ? "未暂存" : ""
+        ].filter(Boolean).join(" / ");
         const syncParts = [];
         if (status.ahead) syncParts.push("领先 " + status.ahead);
         if (status.behind) syncParts.push("落后 " + status.behind);
         const syncText = syncParts.length ? "，" + syncParts.join(" / ") : "";
+        const stageText = stagingText ? "，" + stagingText : "";
         const rewriteText = status.historyRewritten || status.diverged ? "，推送将使用 force-with-lease" : "";
 
         badge.textContent = status.branch || "master";
-        dirtyBadge.textContent = dirtyText;
+        dirtyBadge.textContent = stagingText || dirtyText;
         dirtyBadge.classList.toggle("warning", Boolean(status.dirty || status.historyRewritten || status.diverged));
         badge.classList.toggle("warning", Boolean(status.historyRewritten || status.diverged));
-        statusText.textContent = dirtyText + syncText + rewriteText;
+        statusText.textContent = dirtyText + stageText + syncText + rewriteText;
 
         timeline.innerHTML = state.gitHistory.map((commit) => (
           '<article class="commit-card" title="' + escapeHtml(commit.hash) + '">' +
@@ -1210,12 +1477,20 @@
       }
 
       async function saveCurrentPost() {
+        const hadSlug = Boolean(fields.slug.value.trim());
         const data = await api("/api/posts", {
           method: "POST",
           body: JSON.stringify({ originalSlug: state.originalSlug, post: readForm() })
         });
         state.posts = data.posts;
-        selectPost(data.post);
+        state.originalSlug = data.post.slug || "";
+        if (!hadSlug) {
+          fields.slug.value = data.post.slug || "";
+        }
+        document.querySelector("#currentSlugLabel").textContent = data.post.slug || "新文章";
+        document.querySelector("#editorStateText").textContent = data.post.slug ? "正在编辑：" + data.post.slug : "新文章";
+        renderList();
+        renderWordCount();
         await loadGitStatus();
         return data;
       }
@@ -1256,9 +1531,6 @@
         if (!fields.slug.value.trim()) {
           fields.slug.value = slugifyClient(fields.title.value || file.name);
         }
-        if (!fields.excerpt.value.trim()) {
-          fields.excerpt.value = plainMarkdown(text).slice(0, 140);
-        }
         fields.minutes.value = estimateMinutes(text);
         document.querySelector("#fileStatus").textContent = file.name;
         schedulePreview();
@@ -1280,6 +1552,7 @@
       fields.commit.addEventListener("input", () => syncCommitInputs(fields.commit));
       fields.dockCommit.addEventListener("input", () => syncCommitInputs(fields.dockCommit));
       fields.markdown.addEventListener("input", schedulePreview);
+      document.querySelector("#previewRefreshButton").addEventListener("click", () => renderPreviewNow({ force: true }));
 
       document.querySelector("#fileInput").addEventListener("change", async (event) => {
         const file = event.target.files && event.target.files[0];
@@ -1319,21 +1592,41 @@
         }
       });
 
-      async function saveAndCommitCurrentPost() {
-        await saveCurrentPost();
+      async function stageChanges() {
+        const data = await api("/api/git/stage", {
+          method: "POST"
+        });
+        state.gitHistory = data.history?.commits || state.gitHistory;
+        state.gitStatus = data.status || data.history?.status || null;
+        renderGitPanel();
+        showToast(data.stage.stdout || "已 Stage 当前工作区改动。");
+      }
+
+      async function unstageChanges() {
+        const data = await api("/api/git/unstage", {
+          method: "POST"
+        });
+        state.gitHistory = data.history?.commits || state.gitHistory;
+        state.gitStatus = data.status || data.history?.status || null;
+        renderGitPanel();
+        showToast(data.unstage.stdout || "已清空暂存区。");
+      }
+
+      async function commitStagedChanges() {
         const data = await api("/api/git/commit", {
           method: "POST",
           body: JSON.stringify({ message: getCommitMessage() })
         });
         await loadGit();
-        showToast([
-          data.add.command,
-          data.commit.skipped ? data.commit.stderr : data.commit.stdout
-        ].filter(Boolean).join("\n"));
+        showToast(data.commit.skipped ? data.commit.stderr : (data.commit.stdout || "已提交暂存区改动。"));
       }
 
-      document.querySelector("#commitButton").addEventListener("click", () => saveAndCommitCurrentPost().catch((error) => showToast(error.message)));
-      document.querySelector("#commitHeadButton").addEventListener("click", () => saveAndCommitCurrentPost().catch((error) => showToast(error.message)));
+      document.querySelector("#stageButton").addEventListener("click", () => stageChanges().catch((error) => showToast(error.message)));
+      document.querySelector("#stageHeadButton").addEventListener("click", () => stageChanges().catch((error) => showToast(error.message)));
+      document.querySelector("#unstageButton").addEventListener("click", () => unstageChanges().catch((error) => showToast(error.message)));
+      document.querySelector("#unstageHeadButton").addEventListener("click", () => unstageChanges().catch((error) => showToast(error.message)));
+      document.querySelector("#commitButton").addEventListener("click", () => commitStagedChanges().catch((error) => showToast(error.message)));
+      document.querySelector("#commitHeadButton").addEventListener("click", () => commitStagedChanges().catch((error) => showToast(error.message)));
 
       document.querySelector("#amendButton").addEventListener("click", async () => {
         try {
@@ -1351,6 +1644,37 @@
         }
       });
 
+      function closeSquashModal() {
+        state.pendingSquash = null;
+        document.querySelector("#squashModal").classList.add("hidden");
+      }
+
+      function showSquashModal(preview) {
+        state.pendingSquash = {
+          count: preview.count,
+          message: preview.message
+        };
+
+        const content = document.querySelector("#squashPreviewContent");
+        const commits = (preview.commits || []).map((commit) => (
+          '<article class="squash-preview-card">' +
+            "<strong>" + escapeHtml(commit.subject) + "</strong>" +
+            "<span>" + escapeHtml(commit.shortHash) + " / " + escapeHtml(commit.relativeTime) + " / " + escapeHtml(commit.author) + "</span>" +
+          "</article>"
+        )).join("");
+
+        content.innerHTML =
+          '<div class="squash-result">' +
+            "<small>将 " + escapeHtml(String(preview.count)) + " 个提交合并为 1 个新提交；父提交保留为 " + escapeHtml(preview.result?.parent || "") + "。</small>" +
+            "<strong>" + escapeHtml(preview.result?.subject || preview.message) + "</strong>" +
+          "</div>" +
+          '<div class="squash-preview-list">' +
+            (commits || '<div class="empty-state">没有可展示的提交。</div>') +
+          "</div>";
+
+        document.querySelector("#squashModal").classList.remove("hidden");
+      }
+
       document.querySelector("#squashButton").addEventListener("click", async () => {
         const count = Number(fields.squashCount.value || 2);
         const message = fields.squashMessage.value.trim() || window.prompt("新的合并提交信息", "Update blog content");
@@ -1358,10 +1682,32 @@
 
         try {
           setHistoryBusy(true);
-          const data = await api("/api/git/squash", {
+          const data = await api("/api/git/squash/preview", {
             method: "POST",
             body: JSON.stringify({ count, message })
           });
+          showSquashModal(data);
+        } catch (error) {
+          showToast(error.message);
+        } finally {
+          setHistoryBusy(false);
+        }
+      });
+
+      document.querySelector("#squashCancelButton").addEventListener("click", closeSquashModal);
+      document.querySelector("#squashModal").addEventListener("click", (event) => {
+        if (event.target.id === "squashModal") closeSquashModal();
+      });
+      document.querySelector("#squashConfirmButton").addEventListener("click", async () => {
+        if (!state.pendingSquash) return;
+
+        try {
+          setHistoryBusy(true);
+          const data = await api("/api/git/squash", {
+            method: "POST",
+            body: JSON.stringify({ ...state.pendingSquash, confirmed: true })
+          });
+          closeSquashModal();
           state.gitHistory = data.history.commits || [];
           state.gitStatus = data.status || data.history.status || null;
           renderGitPanel();
