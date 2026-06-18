@@ -269,11 +269,6 @@ a {
   backdrop-filter: blur(12px);
 }
 
-.post-main {
-  height: 100vh;
-  overflow: hidden;
-}
-
 .page-shell {
   display: grid;
   width: min(1160px, calc(100% - 32px));
@@ -285,11 +280,11 @@ a {
 
 .reading-shell {
   width: min(1440px, calc(100% - 24px));
-  height: calc(100vh - 108px);
   min-height: 0;
   grid-template-columns: 72px minmax(0, 1fr);
   gap: 18px;
   margin-top: 96px;
+  align-items: start;
 }
 
 .sidebar {
@@ -643,9 +638,8 @@ a {
 
 .article-screen {
   display: grid;
-  height: 100%;
   min-height: 0;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
 }
 
 .article-page-heading {
@@ -670,20 +664,14 @@ a {
 
 .article-layout {
   display: grid;
-  height: 100%;
   min-height: 0;
   grid-template-columns: minmax(0, 1fr) 260px;
   gap: 18px;
-}
-
-.article-main-scroll,
-.article-toc {
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  align-items: start;
 }
 
 .article-main-scroll {
+  min-width: 0;
   padding-right: 4px;
 }
 
@@ -735,6 +723,7 @@ a {
 .article-body h2,
 .article-body h3,
 .article-body h4 {
+  scroll-margin-top: 104px;
   margin: 28px 0 12px;
   color: var(--text-strong);
   line-height: 1.25;
@@ -792,6 +781,11 @@ a {
 }
 
 .article-toc {
+  position: sticky;
+  top: 96px;
+  max-height: calc(100vh - 116px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 14px;
@@ -837,6 +831,12 @@ a {
 .toc-item:hover {
   color: var(--text-strong);
   background: var(--surface-muted);
+}
+
+.toc-item.active {
+  color: var(--text-strong);
+  background: rgba(80, 128, 142, 0.12);
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
 .toc-item.depth-1 {
@@ -1007,11 +1007,6 @@ a {
     margin-top: 86px;
   }
 
-  .post-main {
-    height: auto;
-    overflow: visible;
-  }
-
   .reading-shell .sidebar {
     display: none;
   }
@@ -1021,17 +1016,16 @@ a {
   }
 
   .article-layout {
-    height: auto;
     min-height: 0;
     grid-template-columns: 1fr;
   }
 
   .article-main-scroll {
-    overflow: visible;
     padding-right: 0;
   }
 
   .article-toc {
+    position: static;
     max-height: 220px;
     overflow-y: auto;
   }

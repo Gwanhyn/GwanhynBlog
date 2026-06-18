@@ -498,7 +498,8 @@ function AboutView() {
 }
 
 function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
-  const articleScrollRef = useRef<HTMLDivElement | null>(null);
+  const articleRef = useRef<HTMLElement | null>(null);
+  const [activeHeadingId, setActiveHeadingId] = useState("");
   const markdown = useMemo(
     () => removeDuplicateTitleHeading(post.markdown || post.body || post.excerpt, post.title),
     [post]
@@ -512,21 +513,47 @@ function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
     [article.headings]
   );
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [post.slug]);
+
+  useEffect(() => {
+    const updateActiveHeading = () => {
+      const headings = Array.from(articleRef.current?.querySelectorAll<HTMLElement>("[id]") || [])
+        .filter((element) => tocHeadings.some((heading) => heading.id === element.id));
+
+      if (!headings.length) {
+        setActiveHeadingId("");
+        return;
+      }
+
+      const anchorLine = 128;
+      const current = headings.reduce((active, heading) => {
+        return heading.getBoundingClientRect().top <= anchorLine ? heading : active;
+      }, headings[0]);
+      setActiveHeadingId(current.id);
+    };
+
+    updateActiveHeading();
+    window.addEventListener("scroll", updateActiveHeading, { passive: true });
+    window.addEventListener("resize", updateActiveHeading);
+    return () => {
+      window.removeEventListener("scroll", updateActiveHeading);
+      window.removeEventListener("resize", updateActiveHeading);
+    };
+  }, [tocHeadings]);
+
   const scrollToHeading = (heading: TocHeading) => {
-    const scrollArea = articleScrollRef.current;
-    const target = Array.from(scrollArea?.querySelectorAll<HTMLElement>("[id]") || [])
+    const target = Array.from(articleRef.current?.querySelectorAll<HTMLElement>("[id]") || [])
       .find((element) => element.id === heading.id);
 
-    if (!scrollArea || !target) {
+    if (!target) {
       return;
     }
 
-    const offset =
-      target.getBoundingClientRect().top -
-      scrollArea.getBoundingClientRect().top +
-      scrollArea.scrollTop -
-      18;
-    scrollArea.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
+    const offset = target.getBoundingClientRect().top + window.scrollY - 104;
+    window.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
+    setActiveHeadingId(heading.id);
   };
 
   return (
@@ -538,8 +565,8 @@ function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
         </button>
       </div>
       <div className="article-layout">
-        <div className="article-main-scroll" ref={articleScrollRef}>
-          <article className="article-page">
+        <div className="article-main-scroll">
+          <article className="article-page" ref={articleRef}>
             <div className="post-meta">
               <span>
                 <CalendarDays size={15} />
@@ -572,9 +599,10 @@ function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
             {tocHeadings.length ? (
               tocHeadings.map((heading) => (
                 <button
-                  className={`toc-item depth-${heading.depth}`}
+                  className={`toc-item depth-${heading.depth}${activeHeadingId === heading.id ? " active" : ""}`}
                   key={heading.id}
                   type="button"
+                  aria-current={activeHeadingId === heading.id ? "true" : undefined}
                   onClick={() => scrollToHeading(heading)}
                 >
                   {heading.text}
