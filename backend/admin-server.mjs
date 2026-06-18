@@ -485,8 +485,8 @@ function runGit(args) {
     execFile("git", args, { cwd: ROOT, encoding: "utf8" }, (error, stdout, stderr) => {
       const result = {
         command: `git ${args.join(" ")}`,
-        stdout: stdout.trim(),
-        stderr: stderr.trim()
+        stdout: stdout.trimEnd(),
+        stderr: stderr.trimEnd()
       };
 
       if (error) {
