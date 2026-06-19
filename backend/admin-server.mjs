@@ -459,6 +459,13 @@ function estimateReadingMinutes(text) {
   return Math.max(1, Math.round((cjkCount + wordCount) / 320) || 1);
 }
 
+function countWords(text) {
+  const plain = String(text || "").trim();
+  const cjkCount = (plain.match(/[\u3400-\u9fff]/g) || []).length;
+  const latinCount = (plain.replace(/[\u3400-\u9fff]/g, " ").match(/[a-z0-9]+/gi) || []).length;
+  return cjkCount + latinCount;
+}
+
 function normalizePost(input, previous = {}) {
   const title = String(input.title || "").trim();
   if (!title) {
@@ -512,6 +519,8 @@ function enrichPostsForEditing(posts) {
 }
 
 function summarizePostForEditing(post) {
+  const countSource = post.markdown || stripHtml(post.body || post.excerpt || "");
+
   return {
     slug: post.slug,
     title: post.title,
@@ -520,6 +529,7 @@ function summarizePostForEditing(post) {
     tags: normalizeTags(post.tags),
     excerpt: String(post.excerpt || ""),
     minutes: Number(post.minutes || 1),
+    wordCount: countWords(countSource),
     accent: ACCENTS.has(post.accent) ? post.accent : "teal"
   };
 }

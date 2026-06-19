@@ -12,6 +12,7 @@ export type Post = {
   tags: string[];
   excerpt: string;
   minutes: number;
+  wordCount: number;
   accent: "teal" | "orange" | "gold" | "ink";
 };
 
@@ -34,6 +35,15 @@ export const focusItems = [
   "用可维护的方式整理课程笔记",
   "给项目补齐可运行的本地开发体验",
   "把读过的文章沉淀成可以复用的索引"
+];
+
+export const resourceItems = [
+  {
+    title: "Gravity Chess",
+    label: "GAME",
+    description: "一个独立静态网页形式的重力棋小项目，适合作为后续小功能入口的第一项。",
+    href: "https://gwanhyn.github.io/Gravity-Chess/"
+  }
 ];
 
 const contentBase = `${import.meta.env.BASE_URL.replace(/\/?$/, "/")}content/`;

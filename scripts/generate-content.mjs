@@ -135,6 +135,13 @@ function estimateReadingMinutes(text) {
   return Math.max(1, Math.round((cjkCount + wordCount) / 320) || 1);
 }
 
+function countWords(text) {
+  const plain = String(text || "").trim();
+  const cjkCount = (plain.match(/[\u3400-\u9fff]/g) || []).length;
+  const latinCount = (plain.replace(/[\u3400-\u9fff]/g, " ").match(/[a-z0-9]+/gi) || []).length;
+  return cjkCount + latinCount;
+}
+
 function isEscaped(source, index) {
   let slashCount = 0;
   for (let cursor = index - 1; cursor >= 0 && source[cursor] === "\\"; cursor -= 1) {
@@ -500,6 +507,7 @@ async function publicPost(post) {
     tags: normalizeTags(post.tags),
     excerpt,
     minutes: Math.max(1, Math.round(Number(post.minutes || estimateReadingMinutes(text)))),
+    wordCount: countWords(text),
     accent: ACCENTS.has(post.accent) ? post.accent : "teal"
   };
 

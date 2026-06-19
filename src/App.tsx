@@ -4,6 +4,7 @@ import {
   BookOpen,
   CalendarDays,
   Clock3,
+  ExternalLink,
   FolderOpen,
   GitBranch,
   Home,
@@ -20,6 +21,7 @@ import {
   loadPost,
   loadPosts,
   profile,
+  resourceItems,
   type Post,
   type PostDetail,
   type TocHeading
@@ -31,7 +33,7 @@ type View = "home" | "archives" | "categories" | "about" | "post";
 const navItems: Array<{ view: View; label: string; icon: typeof Home }> = [
   { view: "home", label: "Home", icon: Home },
   { view: "archives", label: "Archives", icon: Archive },
-  { view: "categories", label: "Categories", icon: FolderOpen },
+  { view: "categories", label: "Resources", icon: FolderOpen },
   { view: "about", label: "About", icon: UserRound }
 ];
 
@@ -60,7 +62,18 @@ function parseHash() {
   return { route, value: value ? decodeURIComponent(value) : "" };
 }
 
+const SITE_STARTED_AT = new Date("2026-06-19T13:27:10+08:00").getTime();
+
+function formatDuration(totalSeconds: number) {
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${days}D ${String(hours).padStart(2, "0")}H ${String(minutes).padStart(2, "0")}M ${String(seconds).padStart(2, "0")}S`;
+}
+
 function App() {
+  const homeScrollPosition = useRef(0);
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [view, setView] = useState<View>("home");
   const [query, setQuery] = useState("");
@@ -93,7 +106,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [posts]);
+  }, []);
 
   useEffect(() => {
     const syncFromHash = () => {
@@ -135,7 +148,7 @@ function App() {
     }, {});
 
     return Object.entries(counts).map(([name, count]) => ({ name, count }));
-  }, []);
+  }, [posts]);
 
   const filteredPosts = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -158,16 +171,23 @@ function App() {
     }, {});
   }, [posts]);
 
-  const changeView = (nextView: View) => {
+  const totalWords = useMemo(
+    () => posts.reduce((sum, post) => sum + Number(post.wordCount || 0), 0),
+    [posts]
+  );
+
+  const changeView = (nextView: View, options: { restoreHomeScroll?: boolean } = {}) => {
     setView(nextView);
     if (nextView !== "post") {
       setSelectedPost(null);
     }
     window.location.hash = nextView === "home" ? "home" : nextView;
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const top = options.restoreHomeScroll ? homeScrollPosition.current : 0;
+    window.setTimeout(() => window.scrollTo({ top, behavior: "auto" }), 0);
   };
 
   const openPost = (post: Post) => {
+    homeScrollPosition.current = window.scrollY;
     setSelectedPost(post);
     setView("post");
     window.location.hash = `post/${encodeURIComponent(post.slug)}`;
@@ -301,20 +321,13 @@ function App() {
             {view === "archives" && <ArchiveView archiveGroups={archiveGroups} />}
 
             {view === "categories" && (
-              <CategoriesView
-                categories={categories}
-                posts={posts}
-                onCategorySelect={(name) => {
-                  setCategory(name);
-                  changeView("home");
-                }}
-              />
+              <ResourcesView />
             )}
 
             {view === "about" && <AboutView />}
 
             {view === "post" && selectedPost && (
-              <ArticleView post={selectedPost} onBack={() => changeView("home")} />
+              <ArticleView post={selectedPost} onBack={() => changeView("home", { restoreHomeScroll: true })} />
             )}
 
             {view === "post" && !selectedPost && (
@@ -327,12 +340,7 @@ function App() {
         </div>
       </main>
 
-      {view !== "post" && (
-        <footer className="footer">
-          <span>© {new Date().getFullYear()} {profile.name}</span>
-          <span>Built with React and Vite</span>
-        </footer>
-      )}
+      <SiteFooter postsCount={posts.length} totalWords={totalWords} />
 
     </>
   );
@@ -503,45 +511,76 @@ function ContentState({ message, detail }: { message: string; detail: string }) 
   );
 }
 
-function CategoriesView({
-  categories,
-  onCategorySelect,
-  posts
-}: {
-  categories: Array<{ name: string; count: number }>;
-  onCategorySelect: (name: string) => void;
-  posts: Post[];
-}) {
+function ResourcesView() {
   return (
     <>
       <div className="section-heading compact">
         <div>
-          <p className="section-kicker">Index</p>
-          <h2>分类</h2>
+          <p className="section-kicker">Resources</p>
+          <h2>功能索引</h2>
         </div>
       </div>
 
-      <div className="category-grid">
-        {categories.map((category) => {
-          const categoryPosts = posts.filter((post) => post.category === category.name);
-          return (
-            <button
-              className="category-card"
-              type="button"
-              key={category.name}
-              onClick={() => onCategorySelect(category.name)}
-            >
-              <span className="category-icon">
-                <FolderOpen size={20} />
-              </span>
-              <strong>{category.name}</strong>
-              <span>{category.count} posts</span>
-              <small>{categoryPosts.map((post) => post.title).join(" / ")}</small>
-            </button>
-          );
-        })}
+      <div className="resource-grid">
+        {resourceItems.map((item) => (
+          <a className="resource-card" href={item.href} key={item.href} target="_blank" rel="noreferrer">
+            <span className="resource-icon">
+              <ExternalLink size={20} />
+            </span>
+            <span className="resource-label">{item.label}</span>
+            <strong>{item.title}</strong>
+            <small>{item.description}</small>
+          </a>
+        ))}
       </div>
     </>
+  );
+}
+
+function useFooterStats() {
+  const [stats, setStats] = useState({ visitors: 1, views: 1 });
+  const [uptime, setUptime] = useState(() => formatDuration(Math.max(0, Math.floor((Date.now() - SITE_STARTED_AT) / 1000))));
+
+  useEffect(() => {
+    const visitorKey = "gwanhyn-visitor-id";
+    const viewsKey = "gwanhyn-page-views";
+    if (!window.localStorage.getItem(visitorKey)) {
+      window.localStorage.setItem(visitorKey, globalThis.crypto?.randomUUID?.() || String(Date.now()));
+    }
+    const views = Number(window.localStorage.getItem(viewsKey) || "0") + 1;
+    window.localStorage.setItem(viewsKey, String(views));
+    setStats({ visitors: 1, views });
+  }, []);
+
+  useEffect(() => {
+    const update = () => setUptime(formatDuration(Math.max(0, Math.floor((Date.now() - SITE_STARTED_AT) / 1000))));
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return { ...stats, uptime };
+}
+
+function SiteFooter({ postsCount, totalWords }: { postsCount: number; totalWords: number }) {
+  const { visitors, views, uptime } = useFooterStats();
+
+  return (
+    <footer className="site-footer">
+      <div className="footer-column footer-left">
+        <span>POWERED BY <a href="https://vite.dev/" target="_blank" rel="noreferrer">VITE</a> / <a href="https://react.dev/" target="_blank" rel="noreferrer">REACT</a></span>
+        <span>THEME <a href={profile.github} target="_blank" rel="noreferrer">GWANHYN BLOG</a></span>
+      </div>
+      <div className="footer-column footer-center">
+        <span>© {new Date().getFullYear()} {profile.name.toUpperCase()}</span>
+        <span>{postsCount} POSTS / {totalWords.toLocaleString("zh-CN")} WORDS</span>
+        <span>UPTIME {uptime}</span>
+      </div>
+      <div className="footer-column footer-right">
+        <span>VISITORS {visitors.toLocaleString("zh-CN")}</span>
+        <span>PAGE VIEWS {views.toLocaleString("zh-CN")}</span>
+      </div>
+    </footer>
   );
 }
 
