@@ -1,6 +1,6 @@
 import { execFile, spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import katex from "katex";
@@ -11,6 +11,9 @@ const ROOT = path.resolve(__dirname, "..");
 const ADMIN_HTML_FILE = path.join(__dirname, "admin.html");
 const DATA_FILE = path.join(ROOT, "src", "data", "posts.json");
 const CONTENT_GENERATOR_FILE = path.join(ROOT, "scripts", "generate-content.mjs");
+const GENERATED_CONTENT_DIR = path.join(ROOT, "public", "content");
+const GENERATED_POSTS_DIR = path.join(GENERATED_CONTENT_DIR, "posts");
+const GENERATED_INDEX_FILE = path.join(GENERATED_CONTENT_DIR, "posts-index.json");
 const FAVICON_FILE = path.join(ROOT, "public", "favicon.svg");
 const KATEX_CSS_FILE = path.join(ROOT, "node_modules", "katex", "dist", "katex.min.css");
 const KATEX_FONT_DIR = path.join(ROOT, "node_modules", "katex", "dist", "fonts");
@@ -525,6 +528,24 @@ function summarizePostsForEditing(posts) {
   return posts.map(summarizePostForEditing);
 }
 
+async function removeGeneratedPost(slug) {
+  const normalizedSlug = slugify(slug);
+  await unlink(path.join(GENERATED_POSTS_DIR, `${normalizedSlug}.json`)).catch((error) => {
+    if (error.code !== "ENOENT") {
+      throw error;
+    }
+  });
+}
+
+async function writeGeneratedIndex(posts) {
+  await mkdir(GENERATED_CONTENT_DIR, { recursive: true });
+  await writeFile(
+    GENERATED_INDEX_FILE,
+    `${JSON.stringify(summarizePostsForEditing(sortPosts(posts)))}\n`,
+    "utf8"
+  );
+}
+
 async function getPost(slug) {
   const normalizedSlug = slugify(slug);
   const post = (await readPosts()).find((item) => item.slug === normalizedSlug);
@@ -572,6 +593,10 @@ async function savePost(payload) {
 
   const sorted = sortPosts(posts);
   await writePosts(sorted);
+  if (originalSlug && originalSlug !== post.slug) {
+    await removeGeneratedPost(originalSlug);
+  }
+  await writeGeneratedIndex(sorted);
   return { post, posts: summarizePostsForEditing(sorted) };
 }
 
@@ -587,6 +612,8 @@ async function deletePost(slug) {
   }
 
   await writePosts(nextPosts);
+  await removeGeneratedPost(normalizedSlug);
+  await writeGeneratedIndex(nextPosts);
   return { posts: summarizePostsForEditing(nextPosts) };
 }
 

@@ -127,6 +127,12 @@
         color: #172124;
         background: rgba(255, 255, 255, 0.72);
         font-weight: 760;
+        transition:
+          border-color 150ms ease,
+          background 150ms ease,
+          box-shadow 150ms ease,
+          color 150ms ease,
+          transform 150ms ease;
       }
 
       .task-button {
@@ -147,40 +153,56 @@
         place-items: center;
         border-radius: 8px;
         color: #ffffff;
-        background: rgba(255, 255, 255, 0.18);
+        background: rgba(23, 33, 36, 0.22);
         font-size: 0.86rem;
         font-weight: 900;
       }
 
       .task-button strong {
-        color: #ffffff;
+        color: #172124;
         font-size: 1rem;
         line-height: 1.1;
       }
 
       .task-button small {
-        color: rgba(255, 255, 255, 0.78);
+        color: #687779;
         font-size: 0.68rem;
         line-height: 1.2;
       }
 
       .task-button.new {
-        border-color: transparent;
-        background: #50808e;
+        border-color: rgba(80, 128, 142, 0.22);
+        background: rgba(80, 128, 142, 0.13);
       }
 
       .task-button.save {
-        border-color: transparent;
-        background: #4f7d52;
+        border-color: rgba(79, 125, 82, 0.22);
+        background: rgba(79, 125, 82, 0.13);
       }
 
       .task-button.delete {
-        border-color: transparent;
-        background: #a84d5b;
+        border-color: rgba(168, 77, 91, 0.22);
+        background: rgba(168, 77, 91, 0.12);
       }
 
       .task-button.refresh {
-        border-color: transparent;
+        border-color: rgba(210, 138, 50, 0.24);
+        background: rgba(210, 138, 50, 0.13);
+      }
+
+      .task-button.new span:first-child {
+        background: #50808e;
+      }
+
+      .task-button.save span:first-child {
+        background: #4f7d52;
+      }
+
+      .task-button.delete span:first-child {
+        background: #a84d5b;
+      }
+
+      .task-button.refresh span:first-child {
         background: #d28a32;
       }
 
@@ -238,6 +260,23 @@
       .icon-button:hover {
         border-color: rgba(80, 128, 142, 0.42);
         box-shadow: 0 8px 24px rgba(80, 128, 142, 0.12);
+        transform: translateY(-1px);
+      }
+
+      .task-button.new:hover {
+        background: rgba(80, 128, 142, 0.25);
+      }
+
+      .task-button.save:hover {
+        background: rgba(79, 125, 82, 0.25);
+      }
+
+      .task-button.delete:hover {
+        background: rgba(168, 77, 91, 0.23);
+      }
+
+      .task-button.refresh:hover {
+        background: rgba(210, 138, 50, 0.25);
       }
 
       .icon-button svg {
@@ -1561,14 +1600,21 @@
         }
       });
 
-      async function stageChanges() {
+      async function stageChanges(options = {}) {
+        if (options.runPrevious) {
+          await saveCurrentPost();
+        }
+
         const data = await api("/api/git/stage", {
           method: "POST"
         });
         state.gitHistory = data.history?.commits || state.gitHistory;
         state.gitStatus = data.status || data.history?.status || null;
         renderGitPanel();
-        showToast(data.stage.stdout || "已 Stage 当前工作区改动。");
+        if (!options.silent) {
+          showToast(data.stage.stdout || "已 Stage 当前工作区改动。");
+        }
+        return data;
       }
 
       async function unstageChanges() {
@@ -1581,7 +1627,12 @@
         showToast(data.unstage.stdout || "已清空暂存区。");
       }
 
-      async function commitStagedChanges() {
+      async function commitStagedChanges(options = {}) {
+        if (options.runPrevious) {
+          await saveCurrentPost();
+          await stageChanges({ silent: true });
+        }
+
         const data = await api("/api/git/commit", {
           method: "POST",
           body: JSON.stringify({ message: getCommitMessage() })
@@ -1590,10 +1641,10 @@
         showToast(data.commit.skipped ? data.commit.stderr : (data.commit.stdout || "已提交暂存区改动。"));
       }
 
-      document.querySelector("#stageHeadButton").addEventListener("click", () => stageChanges().catch((error) => showToast(error.message)));
+      document.querySelector("#stageHeadButton").addEventListener("click", () => stageChanges({ runPrevious: true }).catch((error) => showToast(error.message)));
       document.querySelector("#unstageHeadButton").addEventListener("click", () => unstageChanges().catch((error) => showToast(error.message)));
-      document.querySelector("#commitButton").addEventListener("click", () => commitStagedChanges().catch((error) => showToast(error.message)));
-      document.querySelector("#commitHeadButton").addEventListener("click", () => commitStagedChanges().catch((error) => showToast(error.message)));
+      document.querySelector("#commitButton").addEventListener("click", () => commitStagedChanges({ runPrevious: true }).catch((error) => showToast(error.message)));
+      document.querySelector("#commitHeadButton").addEventListener("click", () => commitStagedChanges({ runPrevious: true }).catch((error) => showToast(error.message)));
 
       document.querySelector("#amendButton").addEventListener("click", async () => {
         try {
