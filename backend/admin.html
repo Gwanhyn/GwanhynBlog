@@ -240,51 +240,6 @@
         box-shadow: 0 8px 24px rgba(80, 128, 142, 0.12);
       }
 
-      .has-tooltip {
-        position: relative;
-      }
-
-      .has-tooltip::after {
-        position: absolute;
-        z-index: 30;
-        bottom: calc(100% + 9px);
-        left: 50%;
-        max-width: 260px;
-        border: 1px solid rgba(23, 33, 36, 0.12);
-        border-radius: 8px;
-        padding: 7px 9px;
-        color: #f8fbfb;
-        content: attr(data-tooltip);
-        background: rgba(18, 27, 30, 0.94);
-        box-shadow: 0 12px 34px rgba(23, 33, 36, 0.22);
-        font-size: 0.74rem;
-        font-weight: 700;
-        line-height: 1.35;
-        opacity: 0;
-        pointer-events: none;
-        text-align: center;
-        transform: translate(-50%, 4px);
-        transition: opacity 140ms ease, transform 140ms ease;
-        white-space: normal;
-      }
-
-      .has-tooltip:hover::after,
-      .has-tooltip:focus-visible::after {
-        opacity: 1;
-        transform: translate(-50%, 0);
-      }
-
-      .task-button.has-tooltip::after {
-        left: 12px;
-        text-align: left;
-        transform: translate(0, 4px);
-      }
-
-      .task-button.has-tooltip:hover::after,
-      .task-button.has-tooltip:focus-visible::after {
-        transform: translate(0, 0);
-      }
-
       .icon-button svg {
         width: 18px;
         height: 18px;
@@ -577,6 +532,46 @@
         font-size: 0.76rem;
       }
 
+      .render-panel-body {
+        display: flex;
+        min-height: 0;
+        flex: 1;
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.42);
+      }
+
+      .render-status-card {
+        border: 1px solid rgba(23, 33, 36, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        color: #49585b;
+        background: rgba(255, 255, 255, 0.62);
+        line-height: 1.55;
+      }
+
+      .render-status-card strong {
+        display: block;
+        margin-bottom: 5px;
+        color: #172124;
+      }
+
+      .render-output {
+        min-height: 0;
+        flex: 1;
+        overflow: auto;
+        border: 1px solid rgba(23, 33, 36, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        color: #eef6f7;
+        background: #172124;
+        font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 0.78rem;
+        line-height: 1.55;
+        white-space: pre-wrap;
+      }
+
       .markdown-input {
         min-height: 0;
         flex: 1;
@@ -682,7 +677,7 @@
         position: sticky;
         bottom: -14px;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) repeat(4, auto);
+        grid-template-columns: minmax(0, 1fr) auto;
         gap: 10px;
         margin: 0 -14px -14px;
         padding: 12px 14px;
@@ -993,10 +988,10 @@
         </header>
 
         <div class="task-group">
-          <button class="task-button new has-tooltip" id="newButton" type="button" data-tooltip="清空编辑区，开始写一篇新文章。"><span>+</span><strong>New</strong><small>新建文章</small></button>
-          <button class="task-button save has-tooltip" id="saveTaskButton" type="button" data-tooltip="只保存当前文章到 src/data/posts.json，不执行 Git 操作。"><span>S</span><strong>Save</strong><small>保存草稿</small></button>
-          <button class="task-button delete has-tooltip" id="deleteButton" type="button" data-tooltip="删除当前选中的文章，删除后仍需手动 Stage 和 Commit。"><span>D</span><strong>Delete</strong><small>删除文章</small></button>
-          <button class="task-button refresh has-tooltip" id="refreshButton" type="button" data-tooltip="重新读取文章数据与 Git 状态。"><span>R</span><strong>Refresh</strong><small>刷新文章</small></button>
+          <button class="task-button new" id="newButton" type="button"><span>+</span><strong>New</strong><small>新建文章</small></button>
+          <button class="task-button save" id="saveTaskButton" type="button"><span>S</span><strong>Save</strong><small>保存草稿</small></button>
+          <button class="task-button delete" id="deleteButton" type="button"><span>D</span><strong>Delete</strong><small>删除文章</small></button>
+          <button class="task-button refresh" id="refreshButton" type="button"><span>R</span><strong>Refresh</strong><small>刷新文章</small></button>
         </div>
 
         <div class="rail-meta">
@@ -1025,10 +1020,10 @@
               <p id="editorStateText">等待载入</p>
             </div>
             <div class="head-actions">
-              <button class="button save-action has-tooltip" id="saveHeadButton" type="submit" data-tooltip="保存当前文章，不暂存、不提交。">Save</button>
-              <button class="button stage-action has-tooltip" id="stageHeadButton" type="button" data-tooltip="执行 git add -A，暂存当前工作区改动。">Stage</button>
-              <button class="button commit-action has-tooltip" id="commitHeadButton" type="button" data-tooltip="只提交暂存区内容；请先 Stage。">Commit</button>
-              <button class="button unstage-action has-tooltip" id="unstageHeadButton" type="button" data-tooltip="清空暂存区，保留工作区文件内容。">Unstage</button>
+              <button class="button save-action" id="saveHeadButton" type="submit">Save</button>
+              <button class="button stage-action" id="stageHeadButton" type="button">Stage</button>
+              <button class="button commit-action" id="commitHeadButton" type="button">Commit</button>
+              <button class="button unstage-action" id="unstageHeadButton" type="button">Unstage</button>
             </div>
           </div>
 
@@ -1099,22 +1094,22 @@
 
             <section class="work-panel">
               <header class="work-panel-header">
-                <h3>内容预览</h3>
-                <div class="preview-actions">
-                  <span class="preview-status" id="previewStatus">按 Markdown 渲染</span>
-                  <button class="button preview-button has-tooltip" id="previewRefreshButton" type="button" data-tooltip="强制刷新当前 Markdown 预览。">Refresh</button>
-                </div>
+                <h3>前台渲染</h3>
+                <button class="button preview-button" id="contentRenderButton" type="button">Render</button>
               </header>
-              <div class="markdown-preview" id="markdownPreview"></div>
+              <div class="render-panel-body">
+                <div class="render-status-card" id="contentRenderStatus">
+                  <strong>未运行</strong>
+                  <span>保存文章后点击 Render，生成前台使用的轻量内容文件。</span>
+                </div>
+                <pre class="render-output" id="contentRenderOutput">等待渲染。</pre>
+              </div>
             </section>
           </div>
 
           <div class="publish-dock">
             <input id="dockCommitInput" value="Update blog content" aria-label="提交信息" />
-            <button class="button save-action has-tooltip" id="saveDockButton" type="submit" data-tooltip="保存当前文章，不暂存、不提交。">Save</button>
-            <button class="button stage-action has-tooltip" id="stageButton" type="button" data-tooltip="执行 git add -A，暂存当前工作区改动。">Stage</button>
-            <button class="button commit-action has-tooltip" id="commitButton" type="button" data-tooltip="只提交暂存区内容；请先 Stage。">Commit</button>
-            <button class="button unstage-action has-tooltip" id="unstageButton" type="button" data-tooltip="清空暂存区，保留工作区文件内容。">Unstage</button>
+            <button class="button commit-action" id="commitButton" type="button">Commit</button>
           </div>
         </form>
       </section>
@@ -1125,7 +1120,7 @@
             <h2>Git 历史</h2>
             <p id="gitStatusText">加载中</p>
           </div>
-          <button class="icon-button has-tooltip" id="historyRefreshButton" type="button" title="刷新历史" aria-label="刷新 Git 历史" data-tooltip="只刷新右侧 Git 历史与状态。">
+          <button class="icon-button" id="historyRefreshButton" type="button" aria-label="刷新 Git 历史">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M21 12a9 9 0 0 1-15.5 6.2" />
               <path d="M3 12A9 9 0 0 1 18.5 5.8" />
@@ -1143,14 +1138,14 @@
         <div class="git-tools">
           <div class="tool-row">
             <input id="amendMessageInput" placeholder="修正提交信息，可留空" />
-            <button class="button has-tooltip" id="amendButton" type="button" data-tooltip="修正最新提交；不会自动 Stage。">Amend</button>
+            <button class="button" id="amendButton" type="button">Amend</button>
           </div>
           <div class="tool-row compact">
             <input id="squashCountInput" type="number" min="2" value="2" aria-label="合并数量" />
             <input id="squashMessageInput" placeholder="新的合并提交信息" />
-            <button class="button has-tooltip" id="squashButton" type="button" data-tooltip="先预览要合并的提交，确认后再改写历史。">Squash</button>
+            <button class="button" id="squashButton" type="button">Squash</button>
           </div>
-          <button class="button primary has-tooltip" id="gitPushButton" type="button" data-tooltip="把本地 master 推送到 origin；如历史被改写会使用 force-with-lease。">Push</button>
+          <button class="button primary" id="gitPushButton" type="button">Push</button>
         </div>
 
         <div class="timeline" id="gitTimeline"></div>
@@ -1167,8 +1162,8 @@
         </header>
         <div class="modal-body" id="squashPreviewContent"></div>
         <footer class="modal-actions">
-          <button class="button has-tooltip" id="squashCancelButton" type="button" data-tooltip="取消这次合并，不修改 Git 历史。">Cancel</button>
-          <button class="button commit-action has-tooltip" id="squashConfirmButton" type="button" data-tooltip="确认后会执行 reset --soft 并生成新的合并提交。">Confirm Squash</button>
+          <button class="button" id="squashCancelButton" type="button">Cancel</button>
+          <button class="button commit-action" id="squashConfirmButton" type="button">Confirm Squash</button>
         </footer>
       </section>
     </div>
@@ -1179,14 +1174,10 @@
         originalSlug: "",
         gitHistory: [],
         gitStatus: null,
-        previewToken: 0,
-        previewTimer: 0,
-        previewAbort: null,
-        pendingSquash: null
+        pendingSquash: null,
+        renderStatus: null,
+        renderTimer: 0
       };
-
-      const AUTO_PREVIEW_LIMIT = 60_000;
-      const PREVIEW_DEBOUNCE_MS = 720;
 
       const fields = {
         title: document.querySelector("#titleInput"),
@@ -1204,12 +1195,6 @@
         squashCount: document.querySelector("#squashCountInput"),
         squashMessage: document.querySelector("#squashMessageInput")
       };
-
-      document.querySelectorAll("[data-tooltip]").forEach((element) => {
-        if (!element.title) {
-          element.title = element.dataset.tooltip;
-        }
-      });
 
       function showToast(message) {
         const toast = document.querySelector("#toast");
@@ -1296,23 +1281,33 @@
         if (source === fields.dockCommit) fields.commit.value = value;
       }
 
-      function selectPost(post) {
+      async function selectPost(post) {
+        let detail = post;
         state.originalSlug = post.slug || "";
-        fields.title.value = post.title || "";
-        fields.slug.value = post.slug || "";
-        fields.date.value = post.date || today();
-        fields.category.value = post.category || "Essay";
-        fields.tags.value = (post.tags || []).join(", ");
-        fields.accent.value = post.accent || "teal";
-        fields.minutes.value = post.minutes || 3;
-        fields.excerpt.value = post.excerpt || "";
-        fields.markdown.value = post.markdown || "";
         document.querySelector("#currentSlugLabel").textContent = post.slug || "新文章";
-        document.querySelector("#editorStateText").textContent = post.slug ? "正在编辑：" + post.slug : "新文章";
+        document.querySelector("#editorStateText").textContent = post.slug ? "正在载入：" + post.slug : "新文章";
+        renderList();
+
+        if (post.slug && typeof post.markdown === "undefined") {
+          const data = await api("/api/posts/" + encodeURIComponent(post.slug));
+          detail = data.post || post;
+        }
+
+        state.originalSlug = detail.slug || "";
+        fields.title.value = detail.title || "";
+        fields.slug.value = detail.slug || "";
+        fields.date.value = detail.date || today();
+        fields.category.value = detail.category || "Essay";
+        fields.tags.value = (detail.tags || []).join(", ");
+        fields.accent.value = detail.accent || "teal";
+        fields.minutes.value = detail.minutes || 3;
+        fields.excerpt.value = detail.excerpt || "";
+        fields.markdown.value = detail.markdown || "";
+        document.querySelector("#currentSlugLabel").textContent = detail.slug || "新文章";
+        document.querySelector("#editorStateText").textContent = detail.slug ? "正在编辑：" + detail.slug : "新文章";
         document.querySelector("#fileStatus").textContent = "未选择文件";
         renderList();
         renderWordCount();
-        renderPreviewNow();
       }
 
       function readForm() {
@@ -1342,7 +1337,7 @@
         list.querySelectorAll("[data-slug]").forEach((button) => {
           button.addEventListener("click", () => {
             const post = state.posts.find((item) => item.slug === button.dataset.slug);
-            if (post) selectPost(post);
+            if (post) selectPost(post).catch((error) => showToast(error.message));
           });
         });
       }
@@ -1352,74 +1347,48 @@
         document.querySelector("#wordCountLabel").textContent = count + " 字";
       }
 
-      function setPreviewStatus(message, warning = false) {
-        const status = document.querySelector("#previewStatus");
-        status.textContent = message;
-        status.classList.toggle("warning", warning);
-      }
-
-      function cancelPreviewRequest() {
-        if (state.previewAbort) {
-          state.previewAbort.abort();
-          state.previewAbort = null;
-        }
-      }
-
-      async function renderPreviewNow(options = {}) {
-        const force = Boolean(options.force);
-        const markdown = fields.markdown.value;
-        const token = ++state.previewToken;
-        const preview = document.querySelector("#markdownPreview");
-
-        if (!force && markdown.length > AUTO_PREVIEW_LIMIT) {
-          cancelPreviewRequest();
-          setPreviewStatus("长文预览已暂停", true);
-          if (!preview.innerHTML.trim()) {
-            preview.innerHTML = '<div class="empty-state">正文较长，已暂停自动预览。点击 Refresh 强制刷新当前预览。</div>';
-          }
-          return;
-        }
-
-        cancelPreviewRequest();
-        const controller = new AbortController();
-        state.previewAbort = controller;
-        setPreviewStatus("正在渲染", false);
-
-        try {
-          const data = await api("/api/markdown/preview", {
-            method: "POST",
-            signal: controller.signal,
-            body: JSON.stringify({ markdown })
-          });
-          if (token === state.previewToken) {
-            preview.innerHTML = data.html || '<div class="empty-state">暂无内容</div>';
-            setPreviewStatus(data.truncated ? "预览已截断" : "预览已更新", Boolean(data.truncated || data.warning));
-            if (data.warning) showToast(data.warning);
-          }
-        } catch (error) {
-          if (error.name === "AbortError") return;
-          if (token === state.previewToken) {
-            preview.innerHTML = '<div class="empty-state">' + escapeHtml(error.message) + "</div>";
-            setPreviewStatus("预览失败", true);
-          }
-        } finally {
-          if (state.previewAbort === controller) {
-            state.previewAbort = null;
-          }
-        }
-      }
-
-      function schedulePreview() {
+      function handleMarkdownInput() {
         renderWordCount();
-        window.clearTimeout(state.previewTimer);
-        if (fields.markdown.value.length > AUTO_PREVIEW_LIMIT) {
-          state.previewToken += 1;
-          cancelPreviewRequest();
-          setPreviewStatus("长文预览已暂停", true);
-          return;
-        }
+      }
 
-        state.previewTimer = window.setTimeout(() => renderPreviewNow(), PREVIEW_DEBOUNCE_MS);
+      function renderContentRenderPanel() {
+        const status = state.renderStatus || {};
+        const button = document.querySelector("#contentRenderButton");
+        const statusCard = document.querySelector("#contentRenderStatus");
+        const output = document.querySelector("#contentRenderOutput");
+        const running = Boolean(status.running);
+        const title = running
+          ? "正在渲染"
+          : (status.finishedAt ? (status.exitCode === 0 ? "渲染完成" : "渲染已停止或失败") : "未运行");
+        const detail = running
+          ? "再次点击 Stop 可以终止本次生成。"
+          : (status.finishedAt ? "前台内容文件已更新；刷新前台页面可查看结果。" : "保存文章后点击 Render，生成前台使用的轻量内容文件。");
+
+        button.textContent = running ? "Stop" : "Render";
+        button.classList.toggle("unstage-action", running);
+        button.classList.toggle("commit-action", !running);
+        statusCard.innerHTML = "<strong>" + escapeHtml(title) + "</strong><span>" + escapeHtml(detail) + "</span>";
+        output.textContent = status.output || "等待渲染。";
+
+        window.clearTimeout(state.renderTimer);
+        if (running) {
+          state.renderTimer = window.setTimeout(loadContentRenderStatus, 1500);
+        }
+      }
+
+      async function loadContentRenderStatus() {
+        state.renderStatus = await api("/api/content/render");
+        renderContentRenderPanel();
+      }
+
+      async function toggleContentRender() {
+        const running = Boolean(state.renderStatus && state.renderStatus.running);
+        state.renderStatus = await api("/api/content/render", {
+          method: "POST",
+          body: JSON.stringify({ action: running ? "stop" : "start" })
+        });
+        renderContentRenderPanel();
+        showToast(running ? "已请求停止渲染。" : "已开始生成前台内容。");
       }
 
       function renderGitPanel() {
@@ -1503,11 +1472,11 @@
         state.posts = postsData.posts || [];
         document.querySelector("#dataFileLabel").textContent = diagnostics.dataFile || "posts.json";
         renderList();
-        selectPost(state.posts.find((post) => post.slug === state.originalSlug) || state.posts[0] || emptyPost());
+        await selectPost(state.posts.find((post) => post.slug === state.originalSlug) || state.posts[0] || emptyPost());
       }
 
       async function load() {
-        await Promise.all([loadPosts(), loadGit()]);
+        await Promise.all([loadPosts(), loadGit(), loadContentRenderStatus()]);
       }
 
       function titleFromMarkdown(markdown, fallback) {
@@ -1533,10 +1502,10 @@
         }
         fields.minutes.value = estimateMinutes(text);
         document.querySelector("#fileStatus").textContent = file.name;
-        schedulePreview();
+        handleMarkdownInput();
       }
 
-      document.querySelector("#newButton").addEventListener("click", () => selectPost(emptyPost()));
+      document.querySelector("#newButton").addEventListener("click", () => selectPost(emptyPost()).catch((error) => showToast(error.message)));
       document.querySelector("#saveTaskButton").addEventListener("click", () => document.querySelector("#editorForm").requestSubmit());
       document.querySelector("#refreshButton").addEventListener("click", async () => {
         try {
@@ -1551,8 +1520,8 @@
 
       fields.commit.addEventListener("input", () => syncCommitInputs(fields.commit));
       fields.dockCommit.addEventListener("input", () => syncCommitInputs(fields.dockCommit));
-      fields.markdown.addEventListener("input", schedulePreview);
-      document.querySelector("#previewRefreshButton").addEventListener("click", () => renderPreviewNow({ force: true }));
+      fields.markdown.addEventListener("input", handleMarkdownInput);
+      document.querySelector("#contentRenderButton").addEventListener("click", () => toggleContentRender().catch((error) => showToast(error.message)));
 
       document.querySelector("#fileInput").addEventListener("change", async (event) => {
         const file = event.target.files && event.target.files[0];
@@ -1584,7 +1553,7 @@
             method: "DELETE"
           });
           state.posts = data.posts;
-          selectPost(state.posts[0] || emptyPost());
+          await selectPost(state.posts[0] || emptyPost());
           await loadGitStatus();
           showToast("文章已删除。");
         } catch (error) {
@@ -1621,9 +1590,7 @@
         showToast(data.commit.skipped ? data.commit.stderr : (data.commit.stdout || "已提交暂存区改动。"));
       }
 
-      document.querySelector("#stageButton").addEventListener("click", () => stageChanges().catch((error) => showToast(error.message)));
       document.querySelector("#stageHeadButton").addEventListener("click", () => stageChanges().catch((error) => showToast(error.message)));
-      document.querySelector("#unstageButton").addEventListener("click", () => unstageChanges().catch((error) => showToast(error.message)));
       document.querySelector("#unstageHeadButton").addEventListener("click", () => unstageChanges().catch((error) => showToast(error.message)));
       document.querySelector("#commitButton").addEventListener("click", () => commitStagedChanges().catch((error) => showToast(error.message)));
       document.querySelector("#commitHeadButton").addEventListener("click", () => commitStagedChanges().catch((error) => showToast(error.message)));

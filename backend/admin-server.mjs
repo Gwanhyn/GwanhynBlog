@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -10,6 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const ADMIN_HTML_FILE = path.join(__dirname, "admin.html");
 const DATA_FILE = path.join(ROOT, "src", "data", "posts.json");
+const CONTENT_GENERATOR_FILE = path.join(ROOT, "scripts", "generate-content.mjs");
 const FAVICON_FILE = path.join(ROOT, "public", "favicon.svg");
 const KATEX_CSS_FILE = path.join(ROOT, "node_modules", "katex", "dist", "katex.min.css");
 const KATEX_FONT_DIR = path.join(ROOT, "node_modules", "katex", "dist", "fonts");
@@ -24,6 +25,15 @@ const FONT_CONTENT_TYPES = new Map([
   [".ttf", "font/ttf"]
 ]);
 let historyRewritten = false;
+let contentRenderProcess = null;
+let contentRenderStatus = {
+  running: false,
+  startedAt: "",
+  finishedAt: "",
+  exitCode: null,
+  signal: null,
+  output: ""
+};
 
 marked.setOptions({
   gfm: true,
@@ -102,9 +112,66 @@ function readRequestBody(request) {
   });
 }
 
+function findJsonArrayEnd(source) {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = true;
+      continue;
+    }
+
+    if (char === "[") {
+      depth += 1;
+    } else if (char === "]") {
+      depth -= 1;
+      if (depth === 0) {
+        return index + 1;
+      }
+    }
+  }
+
+  return -1;
+}
+
+function parsePostsJson(raw) {
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    const trimmed = String(raw || "").trimStart();
+    if (!trimmed.startsWith("[")) {
+      throw error;
+    }
+
+    const offset = raw.length - trimmed.length;
+    const end = findJsonArrayEnd(trimmed);
+    if (end === -1) {
+      throw error;
+    }
+
+    return JSON.parse(raw.slice(offset, offset + end));
+  }
+}
+
 async function readPosts() {
   const raw = await readFile(DATA_FILE, "utf8");
-  return JSON.parse(raw);
+  const posts = parsePostsJson(raw);
+  return Array.isArray(posts) ? posts : [];
 }
 
 async function writePosts(posts) {
@@ -389,15 +456,20 @@ function estimateReadingMinutes(text) {
   return Math.max(1, Math.round((cjkCount + wordCount) / 320) || 1);
 }
 
-function normalizePost(input) {
+function normalizePost(input, previous = {}) {
   const title = String(input.title || "").trim();
   if (!title) {
     throw new Error("标题不能为空。");
   }
 
-  const markdown = normalizeMarkdown(input.markdown ?? input.bodyMarkdown ?? htmlToMarkdown(input.body));
-  const body = markdownToHtml(markdown);
-  const plainBody = stripHtml(body);
+  const markdown = normalizeMarkdown(
+    input.markdown
+      ?? input.bodyMarkdown
+      ?? previous.markdown
+      ?? htmlToMarkdown(input.body ?? previous.body)
+  );
+  const body = String(input.body ?? previous.body ?? "").trim();
+  const plainBody = markdown ? stripHtml(markdown) : stripHtml(body);
   const excerpt = String(input.excerpt || "").trim();
   const date = /^\d{4}-\d{2}-\d{2}$/.test(String(input.date || ""))
     ? String(input.date)
@@ -436,10 +508,48 @@ function enrichPostsForEditing(posts) {
   }));
 }
 
+function summarizePostForEditing(post) {
+  return {
+    slug: post.slug,
+    title: post.title,
+    date: post.date,
+    category: post.category,
+    tags: normalizeTags(post.tags),
+    excerpt: String(post.excerpt || ""),
+    minutes: Number(post.minutes || 1),
+    accent: ACCENTS.has(post.accent) ? post.accent : "teal"
+  };
+}
+
+function summarizePostsForEditing(posts) {
+  return posts.map(summarizePostForEditing);
+}
+
+async function getPost(slug) {
+  const normalizedSlug = slugify(slug);
+  const post = (await readPosts()).find((item) => item.slug === normalizedSlug);
+
+  if (!post) {
+    const error = new Error(`文章 "${normalizedSlug}" 不存在。`);
+    error.status = 404;
+    throw error;
+  }
+
+  return {
+    post: {
+      ...post,
+      markdown: normalizeMarkdown(post.markdown || htmlToMarkdown(post.body || ""))
+    }
+  };
+}
+
 async function savePost(payload) {
   const posts = await readPosts();
   const originalSlug = payload.originalSlug ? slugify(payload.originalSlug) : "";
-  const post = normalizePost(payload.post || {});
+  const previous = originalSlug
+    ? posts.find((item) => item.slug === originalSlug)
+    : null;
+  const post = normalizePost(payload.post || {}, previous || {});
   const duplicate = posts.find(
     (item) => item.slug === post.slug && item.slug !== originalSlug
   );
@@ -462,7 +572,7 @@ async function savePost(payload) {
 
   const sorted = sortPosts(posts);
   await writePosts(sorted);
-  return { post, posts: enrichPostsForEditing(sorted) };
+  return { post, posts: summarizePostsForEditing(sorted) };
 }
 
 async function deletePost(slug) {
@@ -477,7 +587,7 @@ async function deletePost(slug) {
   }
 
   await writePosts(nextPosts);
-  return { posts: enrichPostsForEditing(nextPosts) };
+  return { posts: summarizePostsForEditing(nextPosts) };
 }
 
 function runGit(args) {
@@ -710,6 +820,78 @@ async function commitChanges(message) {
   };
 }
 
+function appendRenderOutput(chunk) {
+  const nextOutput = `${contentRenderStatus.output}${chunk}`;
+  contentRenderStatus.output = nextOutput.slice(-6000);
+}
+
+function getContentRenderStatus() {
+  return {
+    ...contentRenderStatus,
+    pid: contentRenderProcess?.pid || null
+  };
+}
+
+function startContentRender() {
+  if (contentRenderProcess) {
+    return getContentRenderStatus();
+  }
+
+  contentRenderStatus = {
+    running: true,
+    startedAt: new Date().toISOString(),
+    finishedAt: "",
+    exitCode: null,
+    signal: null,
+    output: ""
+  };
+
+  contentRenderProcess = spawn(process.execPath, [CONTENT_GENERATOR_FILE], {
+    cwd: ROOT,
+    windowsHide: true
+  });
+
+  contentRenderProcess.stdout.on("data", (chunk) => appendRenderOutput(chunk.toString()));
+  contentRenderProcess.stderr.on("data", (chunk) => appendRenderOutput(chunk.toString()));
+  contentRenderProcess.on("error", (error) => {
+    appendRenderOutput(`${error.message}\n`);
+    contentRenderStatus.running = false;
+    contentRenderStatus.finishedAt = new Date().toISOString();
+    contentRenderStatus.exitCode = 1;
+    contentRenderProcess = null;
+  });
+  contentRenderProcess.on("close", (code, signal) => {
+    contentRenderStatus.running = false;
+    contentRenderStatus.finishedAt = new Date().toISOString();
+    contentRenderStatus.exitCode = code;
+    contentRenderStatus.signal = signal;
+    contentRenderProcess = null;
+  });
+
+  return getContentRenderStatus();
+}
+
+function stopContentRender() {
+  if (contentRenderProcess) {
+    contentRenderProcess.kill();
+    appendRenderOutput("Render stopped by user.\n");
+  }
+
+  return getContentRenderStatus();
+}
+
+function handleContentRenderAction(action) {
+  if (action === "stop") {
+    return stopContentRender();
+  }
+
+  if (action === "start") {
+    return startContentRender();
+  }
+
+  return contentRenderProcess ? stopContentRender() : startContentRender();
+}
+
 function notFound(response) {
   sendJson(response, 404, { error: "Not found." });
 }
@@ -720,20 +902,37 @@ async function routeApi(request, response, url) {
       storage: "JSON",
       dataFile: path.relative(ROOT, DATA_FILE).replaceAll("\\", "/"),
       frontendEntry: "src/content.ts",
-      renderFlow: "src/App.tsx imports posts from src/content.ts and renders the home list.",
+      renderFlow: "scripts/generate-content.mjs renders public/content before Vite serves or builds the frontend.",
       localOnly: true
     });
     return;
   }
 
   if (request.method === "GET" && url.pathname === "/api/posts") {
-    sendJson(response, 200, { posts: enrichPostsForEditing(await readPosts()) });
+    sendJson(response, 200, { posts: summarizePostsForEditing(await readPosts()) });
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/api/posts") {
     const payload = JSON.parse(await readRequestBody(request));
     sendJson(response, 200, await savePost(payload));
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname.startsWith("/api/posts/")) {
+    const slug = decodeURIComponent(url.pathname.slice("/api/posts/".length));
+    sendJson(response, 200, await getPost(slug));
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/content/render") {
+    sendJson(response, 200, getContentRenderStatus());
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/content/render") {
+    const payload = JSON.parse(await readRequestBody(request) || "{}");
+    sendJson(response, 200, handleContentRenderAction(payload.action || "toggle"));
     return;
   }
 
