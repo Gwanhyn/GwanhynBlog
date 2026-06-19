@@ -1,4 +1,6 @@
-import { rm, mkdir, readFile, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { mkdtemp, rm, mkdir, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import katex from "katex";
@@ -10,6 +12,15 @@ const SOURCE_FILE = path.join(ROOT, "src", "data", "posts.json");
 const OUTPUT_DIR = path.join(ROOT, "public", "content");
 const POSTS_DIR = path.join(OUTPUT_DIR, "posts");
 const ACCENTS = new Set(["teal", "orange", "gold", "ink"]);
+const PANDOC_TIMEOUT_MS = Number(process.env.PANDOC_TIMEOUT_MS || 180_000);
+let activePandocProcess = null;
+
+process.on("SIGTERM", () => {
+  if (activePandocProcess) {
+    activePandocProcess.kill();
+  }
+  process.exit(143);
+});
 
 function findJsonArrayEnd(source) {
   let depth = 0;
@@ -362,6 +373,75 @@ function renderMarkdown(markdown) {
   return { html: cleanHtml(html), headings };
 }
 
+function runPandoc(args) {
+  return new Promise((resolve, reject) => {
+    const child = execFile(
+      "pandoc",
+      args,
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        timeout: PANDOC_TIMEOUT_MS,
+        windowsHide: true,
+        maxBuffer: 1024 * 1024
+      },
+      (error, stdout, stderr) => {
+        activePandocProcess = null;
+        const result = {
+          stdout: stdout.trimEnd(),
+          stderr: stderr.trimEnd()
+        };
+
+        if (error) {
+          error.result = result;
+          reject(error);
+          return;
+        }
+
+        resolve(result);
+      }
+    );
+
+    activePandocProcess = child;
+  });
+}
+
+async function renderMarkdownWithPandoc(markdown) {
+  const tempDir = await mkdtemp(path.join(tmpdir(), "gwanhyn-pandoc-"));
+  const inputFile = path.join(tempDir, "input.md");
+  const outputFile = path.join(tempDir, "output.html");
+
+  try {
+    await writeFile(inputFile, normalizeMarkdown(markdown), "utf8");
+    await runPandoc([
+      inputFile,
+      "-f",
+      "gfm+tex_math_dollars+raw_html",
+      "-t",
+      "html",
+      "--mathml",
+      "--wrap=none",
+      "-o",
+      outputFile
+    ]);
+
+    const html = cleanHtml(await readFile(outputFile, "utf8"));
+    return { html, headings: headingsFromHtml(html) };
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}
+
+async function renderMarkdownDocument(markdown, slug) {
+  try {
+    return await renderMarkdownWithPandoc(markdown);
+  } catch (error) {
+    const detail = error.result?.stderr || error.message || "unknown error";
+    console.warn(`Pandoc failed for ${slug || "post"}; falling back to JS renderer. ${detail}`);
+    return renderMarkdown(markdown);
+  }
+}
+
 function removeDuplicateTitleHeading(markdown, title) {
   const lines = String(markdown || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   const firstContentIndex = lines.findIndex((line) => line.trim());
@@ -401,11 +481,11 @@ function normalizeTags(tags) {
     .filter(Boolean);
 }
 
-function publicPost(post) {
+async function publicPost(post) {
   const title = String(post.title || "").trim();
   const markdown = removeDuplicateTitleHeading(normalizeMarkdown(post.markdown || ""), title);
   const rendered = markdown
-    ? renderMarkdown(markdown)
+    ? await renderMarkdownDocument(markdown, post.slug)
     : { html: cleanHtml(post.body || ""), headings: headingsFromHtml(post.body || "") };
   const text = markdown ? plainMarkdown(markdown) : stripHtml(rendered.html);
   const excerpt = String(post.excerpt || "").trim();
@@ -443,7 +523,7 @@ async function main() {
 
   const summaries = [];
   for (const post of posts) {
-    const { summary, detail } = publicPost(post);
+    const { summary, detail } = await publicPost(post);
     if (!summary.slug || !summary.title) {
       continue;
     }

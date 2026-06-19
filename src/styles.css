@@ -971,6 +971,16 @@ a {
   margin: 0;
 }
 
+.article-body math {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.article-body math[display="block"] {
+  display: block;
+  margin: 22px 0;
+}
+
 .article-toc {
   position: sticky;
   top: 102px;
