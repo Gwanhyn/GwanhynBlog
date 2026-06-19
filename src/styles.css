@@ -766,6 +766,26 @@ a {
   transform: translateY(-1px);
 }
 
+.content-state {
+  display: grid;
+  gap: 6px;
+  grid-column: 1 / -1;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  color: var(--muted);
+  background: var(--surface-muted);
+}
+
+.content-state strong {
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.content-state span {
+  line-height: 1.55;
+}
+
 .article-screen {
   display: grid;
   min-height: 0;

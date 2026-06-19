@@ -15,8 +15,15 @@ import {
   UserRound
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { focusItems, posts, profile, type Post } from "./content";
-import { renderMarkdown, type TocHeading } from "./markdown";
+import {
+  focusItems,
+  loadPost,
+  loadPosts,
+  profile,
+  type Post,
+  type PostDetail,
+  type TocHeading
+} from "./content";
 
 type Theme = "light" | "dark";
 type View = "home" | "archives" | "categories" | "about" | "post";
@@ -58,6 +65,9 @@ function App() {
   const [view, setView] = useState<View>("home");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [contentStatus, setContentStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [contentError, setContentError] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   useEffect(() => {
@@ -66,12 +76,38 @@ function App() {
   }, [theme]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    loadPosts()
+      .then((items) => {
+        if (cancelled) return;
+        setPosts(items);
+        setContentStatus("ready");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setContentError(error instanceof Error ? error.message : "内容索引加载失败。");
+        setContentStatus("error");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [posts]);
+
+  useEffect(() => {
     const syncFromHash = () => {
       const { route, value } = parseHash();
       if (route === "post" && value) {
         const post = posts.find((item) => item.slug === value);
         if (post) {
           setSelectedPost(post);
+          setView("post");
+          return;
+        }
+
+        if (!posts.length && contentStatus === "loading") {
+          setSelectedPost(null);
           setView("post");
           return;
         }
@@ -90,7 +126,7 @@ function App() {
     syncFromHash();
     window.addEventListener("hashchange", syncFromHash);
     return () => window.removeEventListener("hashchange", syncFromHash);
-  }, []);
+  }, [contentStatus, posts]);
 
   const categories = useMemo(() => {
     const counts = posts.reduce<Record<string, number>>((acc, post) => {
@@ -112,7 +148,7 @@ function App() {
 
       return matchesCategory && (!normalizedQuery || text.includes(normalizedQuery));
     });
-  }, [category, query]);
+  }, [category, posts, query]);
 
   const archiveGroups = useMemo(() => {
     return posts.reduce<Record<string, Post[]>>((acc, post) => {
@@ -120,7 +156,7 @@ function App() {
       acc[year] = [...(acc[year] ?? []), post];
       return acc;
     }, {});
-  }, []);
+  }, [posts]);
 
   const changeView = (nextView: View) => {
     setView(nextView);
@@ -251,7 +287,10 @@ function App() {
               <HomeView
                 categories={categories}
                 category={category}
+                contentError={contentError}
+                contentStatus={contentStatus}
                 filteredPosts={filteredPosts}
+                postsCount={posts.length}
                 query={query}
                 setCategory={setCategory}
                 setQuery={setQuery}
@@ -264,6 +303,7 @@ function App() {
             {view === "categories" && (
               <CategoriesView
                 categories={categories}
+                posts={posts}
                 onCategorySelect={(name) => {
                   setCategory(name);
                   changeView("home");
@@ -275,6 +315,13 @@ function App() {
 
             {view === "post" && selectedPost && (
               <ArticleView post={selectedPost} onBack={() => changeView("home")} />
+            )}
+
+            {view === "post" && !selectedPost && (
+              <ContentState
+                message={contentStatus === "loading" ? "文章索引加载中" : "没有找到这篇文章"}
+                detail={contentStatus === "error" ? contentError : "请稍后重试，或返回首页重新选择文章。"}
+              />
             )}
           </section>
         </div>
@@ -294,7 +341,10 @@ function App() {
 type HomeViewProps = {
   categories: Array<{ name: string; count: number }>;
   category: string;
+  contentError: string;
+  contentStatus: "loading" | "ready" | "error";
   filteredPosts: Post[];
+  postsCount: number;
   query: string;
   onPostOpen: (post: Post) => void;
   setCategory: (category: string) => void;
@@ -304,8 +354,11 @@ type HomeViewProps = {
 function HomeView({
   categories,
   category,
+  contentError,
+  contentStatus,
   filteredPosts,
   onPostOpen,
+  postsCount,
   query,
   setCategory,
   setQuery
@@ -334,7 +387,7 @@ function HomeView({
           onClick={() => setCategory("All")}
         >
           All
-          <span>{posts.length}</span>
+          <span>{postsCount}</span>
         </button>
         {categories.map((item) => (
           <button
@@ -350,7 +403,19 @@ function HomeView({
       </div>
 
       <div className="post-list">
-        {filteredPosts.map((post) => (
+        {contentStatus === "loading" && (
+          <ContentState message="文章索引加载中" detail="首页只加载轻量索引，文章正文会在点击后按需读取。" />
+        )}
+
+        {contentStatus === "error" && (
+          <ContentState message="文章索引加载失败" detail={contentError} />
+        )}
+
+        {contentStatus === "ready" && !filteredPosts.length && (
+          <ContentState message="没有匹配的文章" detail="可以换个关键词或分类再试。" />
+        )}
+
+        {contentStatus === "ready" && filteredPosts.map((post) => (
           <article className={`post-card accent-${post.accent}`} key={post.slug}>
             <div className="post-card-main">
               <div className="post-meta">
@@ -429,12 +494,23 @@ function ArchiveView({ archiveGroups }: { archiveGroups: Record<string, Post[]> 
   );
 }
 
+function ContentState({ message, detail }: { message: string; detail: string }) {
+  return (
+    <div className="content-state">
+      <strong>{message}</strong>
+      <span>{detail}</span>
+    </div>
+  );
+}
+
 function CategoriesView({
   categories,
-  onCategorySelect
+  onCategorySelect,
+  posts
 }: {
   categories: Array<{ name: string; count: number }>;
   onCategorySelect: (name: string) => void;
+  posts: Post[];
 }) {
   return (
     <>
@@ -499,25 +575,44 @@ function AboutView() {
 
 function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
   const articleRef = useRef<HTMLElement | null>(null);
+  const [article, setArticle] = useState<PostDetail | null>(null);
+  const [articleStatus, setArticleStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [articleError, setArticleError] = useState("");
   const [activeHeadingId, setActiveHeadingId] = useState("");
-  const markdown = useMemo(
-    () => removeDuplicateTitleHeading(post.markdown || post.body || post.excerpt, post.title),
-    [post]
-  );
-  const article = useMemo(
-    () => renderMarkdown(markdown),
-    [markdown]
-  );
   const tocHeadings = useMemo(
-    () => article.headings.filter((heading) => heading.depth >= 1 && heading.depth <= 4),
-    [article.headings]
+    () => (article?.headings || []).filter((heading) => heading.depth >= 1 && heading.depth <= 4),
+    [article]
   );
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
+    setArticle(null);
+    setArticleStatus("loading");
+    setArticleError("");
+    let cancelled = false;
+
+    loadPost(post.slug)
+      .then((detail) => {
+        if (cancelled) return;
+        setArticle(detail);
+        setArticleStatus("ready");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setArticleError(error instanceof Error ? error.message : "文章内容加载失败。");
+        setArticleStatus("error");
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [post.slug]);
 
   useEffect(() => {
+    if (!article) {
+      return undefined;
+    }
+
     const updateActiveHeading = () => {
       const headings = Array.from(articleRef.current?.querySelectorAll<HTMLElement>("[id]") || [])
         .filter((element) => tocHeadings.some((heading) => heading.id === element.id));
@@ -543,7 +638,7 @@ function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
       window.removeEventListener("scroll", updateActiveHeading);
       window.removeEventListener("resize", updateActiveHeading);
     };
-  }, [tocHeadings]);
+  }, [article, tocHeadings]);
 
   const scrollToHeading = (heading: TocHeading) => {
     const target = Array.from(articleRef.current?.querySelectorAll<HTMLElement>("[id]") || [])
@@ -590,8 +685,18 @@ function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
             </div>
             <div
               className="article-body"
-              dangerouslySetInnerHTML={{ __html: article.html }}
+              dangerouslySetInnerHTML={{
+                __html: articleStatus === "ready" && article
+                  ? article.body
+                  : ""
+              }}
             />
+            {articleStatus === "loading" && (
+              <ContentState message="文章内容加载中" detail="正在按需读取预渲染内容，不会阻塞首页。" />
+            )}
+            {articleStatus === "error" && (
+              <ContentState message="文章内容加载失败" detail={articleError} />
+            )}
           </article>
         </div>
 
@@ -612,33 +717,13 @@ function ArticleView({ post, onBack }: { post: Post; onBack: () => void }) {
                 </button>
               ))
             ) : (
-              <p className="toc-empty">暂无标题</p>
+              <p className="toc-empty">{articleStatus === "loading" ? "加载中" : "暂无标题"}</p>
             )}
           </div>
         </aside>
       </div>
     </section>
   );
-}
-
-function removeDuplicateTitleHeading(markdown: string, title: string) {
-  const lines = String(markdown || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-  const firstContentIndex = lines.findIndex((line) => line.trim());
-
-  if (firstContentIndex === -1) {
-    return markdown;
-  }
-
-  const match = lines[firstContentIndex].match(/^#\s+(.+?)\s*#*\s*$/);
-  const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
-
-  if (match && normalize(match[1]) === normalize(title)) {
-    return [...lines.slice(0, firstContentIndex), ...lines.slice(firstContentIndex + 1)]
-      .join("\n")
-      .trim();
-  }
-
-  return markdown;
 }
 
 export default App;

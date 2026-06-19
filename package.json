@@ -8,11 +8,14 @@
     "node": "22.x"
   },
   "scripts": {
+    "predev": "node scripts/generate-content.mjs --quiet",
     "dev": "vite --host 0.0.0.0",
+    "prebuild": "node scripts/generate-content.mjs",
     "build": "tsc -b && vite build",
     "build:pages": "cross-env VITE_BASE=/GwanhynBlog/ npm run build",
     "deploy": "npm run build:pages && gh-pages -d dist",
     "admin": "node backend/admin-server.mjs",
+    "render:content": "node scripts/generate-content.mjs",
     "run": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
