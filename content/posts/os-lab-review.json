@@ -1,0 +1,1 @@
+{"slug":"os-lab-review","title":"一次系统实验后的复盘清单","date":"2026-05-28","category":"Learning","tags":["OS","Notes"],"excerpt":"把实验中容易混淆的边界条件、调试路径和最终结论收束成一份短清单，方便后续回看。","minutes":6,"wordCount":69,"accent":"orange","body":"<p>系统实验结束后，最值得留下来的不是完整过程，而是那些反复踩到的边界条件和调试路径。</p><ul><li>先复现，再定位。</li><li>把输入、状态和输出拆开记录。</li><li>给最终结论留下可验证的证据。</li></ul>","headings":[]}
